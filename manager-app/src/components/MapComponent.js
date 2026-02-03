@@ -2,7 +2,7 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Box, Typography, Chip } from '@mui/material';
-import { getStatutLabel, getStatutColor } from '../data/signalements';
+import { getStatutLabel, getStatutColor } from '../services/signalementService';
 
 // Fix pour les icônes Leaflet avec React
 delete L.Icon.Default.prototype._getIconUrl;

@@ -33,6 +33,17 @@ public class SignalementDTO {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime dateCreation;
 
+    @Schema(description = "Date de début des travaux", example = "2026-01-16T08:00:00")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime dateDebutTravaux;
+
+    @Schema(description = "Date de fin des travaux", example = "2026-01-20T17:00:00")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime dateFinTravaux;
+
+    @Schema(description = "Pourcentage d'avancement (0, 50, 100)", example = "50")
+    private Integer avancement;
+
     @Schema(description = "Code du statut", example = "nouveau", allowableValues = {"nouveau", "en_cours", "planifie", "en_attente", "termine"})
     private String statut;
 

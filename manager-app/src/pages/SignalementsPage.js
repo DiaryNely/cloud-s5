@@ -30,19 +30,26 @@ import {
   ListItem,
   ListItemText,
   Divider,
-  CircularProgress
+  CircularProgress,
+  LinearProgress,
+  Tooltip
 } from '@mui/material';
 import { 
   getSignalements, 
-  updateSignalement, 
+  updateSignalement,
+  updateSignalementStatut,
   getHistorique, 
   getStatutLabel, 
-  getStatutColor 
+  getStatutColor,
+  getAvancementFromStatut
 } from '../services/signalementService';
 import { getEntreprises } from '../services/userService';
 import EditIcon from '@mui/icons-material/Edit';
 import HistoryIcon from '@mui/icons-material/History';
 import CircleIcon from '@mui/icons-material/Circle';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 const SignalementsPage = () => {
   const [signalements, setSignalements] = useState([]);
@@ -83,7 +90,8 @@ const SignalementsPage = () => {
       statut: signalement.statut,
       surface: signalement.surface,
       budgetEstime: signalement.budgetEstime,
-      entreprise: signalement.entreprise || ''
+      entreprise: signalement.entreprise || '',
+      commentaire: ''
     });
     setOpenEditDialog(true);
     setSuccessMessage('');
@@ -99,21 +107,39 @@ const SignalementsPage = () => {
     try {
       await updateSignalement(selectedSignalement.id, editForm);
       await loadData();
-      setSuccessMessage(`Signalement #${selectedSignalement.id} mis à jour avec succès !`);
+      const avancement = getAvancementFromStatut(editForm.statut);
+      setSuccessMessage(`Signalement #${selectedSignalement.id} mis à jour avec succès ! Avancement: ${avancement}%`);
       handleCloseEdit();
     } catch (err) {
       setError('Erreur lors de la mise à jour');
+      console.error(err);
+    }
+  };
+
+  // Changement rapide de statut
+  const handleQuickStatusChange = async (signalement, newStatut) => {
+    try {
+      await updateSignalementStatut(signalement.id, newStatut);
+      await loadData();
+      const avancement = getAvancementFromStatut(newStatut);
+      setSuccessMessage(`Statut du signalement #${signalement.id} changé en "${getStatutLabel(newStatut)}" (${avancement}%)`);
+    } catch (err) {
+      setError('Erreur lors du changement de statut');
+      console.error(err);
     }
   };
 
   const handleOpenHistory = async (signalement) => {
     try {
-      const hist = await getHistorique(signalement.id);
-      setHistorique(hist);
+      const histData = await getHistorique(signalement.id);
+      // L'API retourne { id: [...] }, on extrait le tableau
+      const hist = histData[signalement.id] || histData || [];
+      setHistorique(Array.isArray(hist) ? hist : []);
       setSelectedSignalement(signalement);
       setOpenHistoryDialog(true);
     } catch (err) {
       setError('Erreur lors du chargement de l\'historique');
+      console.error(err);
     }
   };
 
@@ -254,6 +280,7 @@ const SignalementsPage = () => {
                 <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Localisation</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Statut</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Avancement</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Surface</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Budget</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Entreprise</TableCell>
@@ -262,7 +289,9 @@ const SignalementsPage = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {signalements.map((signalement) => (
+              {signalements.map((signalement) => {
+                const avancement = signalement.avancement ?? getAvancementFromStatut(signalement.statut);
+                return (
                 <TableRow key={signalement.id} hover>
                   <TableCell>#{signalement.id}</TableCell>
                   <TableCell>{signalement.localisation}</TableCell>
@@ -277,6 +306,28 @@ const SignalementsPage = () => {
                       }}
                     />
                   </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 120 }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={avancement}
+                        sx={{ 
+                          flex: 1, 
+                          height: 10, 
+                          borderRadius: 5,
+                          backgroundColor: '#e0e0e0',
+                          '& .MuiLinearProgress-bar': {
+                            borderRadius: 5,
+                            backgroundColor: avancement === 100 ? '#4caf50' : 
+                                           avancement >= 50 ? '#ff9800' : '#f44336'
+                          }
+                        }}
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 40 }}>
+                        {avancement}%
+                      </Typography>
+                    </Box>
+                  </TableCell>
                   <TableCell>{signalement.surface} m²</TableCell>
                   <TableCell>{formatBudget(signalement.budgetEstime)}</TableCell>
                   <TableCell>
@@ -286,27 +337,53 @@ const SignalementsPage = () => {
                   </TableCell>
                   <TableCell>{formatDate(signalement.dateCreation)}</TableCell>
                   <TableCell>
-                    <Box display="flex" gap={1}>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleOpenEdit(signalement)}
-                        title="Modifier"
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="secondary"
-                        onClick={() => handleOpenHistory(signalement)}
-                        title="Historique"
-                      >
-                        <HistoryIcon />
-                      </IconButton>
+                    <Box display="flex" gap={0.5} flexWrap="wrap">
+                      {/* Boutons de changement rapide de statut */}
+                      {signalement.statut === 'nouveau' && (
+                        <Tooltip title="Démarrer les travaux (50%)">
+                          <IconButton
+                            size="small"
+                            sx={{ color: '#ff9800' }}
+                            onClick={() => handleQuickStatusChange(signalement, 'en_cours')}
+                          >
+                            <PlayArrowIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {signalement.statut === 'en_cours' && (
+                        <Tooltip title="Terminer les travaux (100%)">
+                          <IconButton
+                            size="small"
+                            sx={{ color: '#4caf50' }}
+                            onClick={() => handleQuickStatusChange(signalement, 'termine')}
+                          >
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Modifier">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleOpenEdit(signalement)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Historique">
+                        <IconButton
+                          size="small"
+                          color="secondary"
+                          onClick={() => handleOpenHistory(signalement)}
+                        >
+                          <HistoryIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
@@ -314,14 +391,55 @@ const SignalementsPage = () => {
 
       {/* Dialog de modification */}
       <Dialog open={openEditDialog} onClose={handleCloseEdit} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Modifier le signalement #{selectedSignalement?.id}
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <span>Modifier le signalement #{selectedSignalement?.id}</span>
+          {selectedSignalement && (
+            <Chip
+              label={`${selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)}%`}
+              size="small"
+              sx={{
+                backgroundColor: (selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)) === 100 ? '#4caf50' :
+                                (selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)) >= 50 ? '#ff9800' : '#f44336',
+                color: 'white',
+                fontWeight: 600
+              }}
+            />
+          )}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               <strong>Localisation:</strong> {selectedSignalement?.localisation}
             </Typography>
+
+            {/* Barre de progression */}
+            {selectedSignalement && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <strong>Avancement actuel:</strong>
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)}
+                    sx={{ 
+                      flex: 1, 
+                      height: 12, 
+                      borderRadius: 6,
+                      backgroundColor: '#e0e0e0',
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 6,
+                        backgroundColor: (selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)) === 100 ? '#4caf50' :
+                                       (selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)) >= 50 ? '#ff9800' : '#f44336'
+                      }
+                    }}
+                  />
+                  <Typography variant="body1" sx={{ fontWeight: 700, minWidth: 50 }}>
+                    {selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)}%
+                  </Typography>
+                </Box>
+              </Box>
+            )}
 
             <FormControl fullWidth margin="normal">
               <InputLabel>Statut</InputLabel>
@@ -330,9 +448,24 @@ const SignalementsPage = () => {
                 label="Statut"
                 onChange={(e) => setEditForm({ ...editForm, statut: e.target.value })}
               >
-                <MenuItem value="nouveau">Nouveau</MenuItem>
-                <MenuItem value="en_cours">En cours</MenuItem>
-                <MenuItem value="termine">Terminé</MenuItem>
+                <MenuItem value="nouveau">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#f44336' }} />
+                    Nouveau (0%)
+                  </Box>
+                </MenuItem>
+                <MenuItem value="en_cours">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#ff9800' }} />
+                    En cours (50%)
+                  </Box>
+                </MenuItem>
+                <MenuItem value="termine">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#4caf50' }} />
+                    Terminé (100%)
+                  </Box>
+                </MenuItem>
               </Select>
             </FormControl>
 
@@ -361,11 +494,22 @@ const SignalementsPage = () => {
               onChange={(e) => setEditForm({ ...editForm, entreprise: e.target.value })}
               margin="normal"
             />
+
+            <TextField
+              fullWidth
+              label="Commentaire (optionnel)"
+              multiline
+              rows={3}
+              value={editForm.commentaire || ''}
+              onChange={(e) => setEditForm({ ...editForm, commentaire: e.target.value })}
+              margin="normal"
+              placeholder="Ajoutez un commentaire pour expliquer la modification..."
+            />
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseEdit}>Annuler</Button>
-          <Button onClick={handleSaveEdit} variant="contained">
+          <Button onClick={handleSaveEdit} variant="contained" color="primary">
             Enregistrer
           </Button>
         </DialogActions>

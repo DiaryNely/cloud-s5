@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import SignalementsPage from './pages/SignalementsPage';
+import StatistiquesPage from './pages/StatistiquesPage';
 import CreateSignalementPage from './pages/CreateSignalementPage';
 import UserSignalementsPage from './pages/UserSignalementsPage';
 import './App.css';
@@ -73,6 +74,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SignalementsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/statistiques"
+              element={
+                <ProtectedRoute>
+                  <StatistiquesPage />
                 </ProtectedRoute>
               }
             />

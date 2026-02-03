@@ -139,6 +139,19 @@ public class SignalementService {
                 signalement.setStatus(nouveauStatus);
                 statusChanged = true;
                 
+                // Gestion automatique des dates d'avancement
+                String nouveauCode = nouveauStatus.getCode().toUpperCase();
+                if (SignalementStatus.EN_COURS.equals(nouveauCode) && signalement.getDateDebutTravaux() == null) {
+                    signalement.setDateDebutTravaux(java.time.LocalDateTime.now());
+                }
+                if (SignalementStatus.TERMINE.equals(nouveauCode)) {
+                    signalement.setDateFinTravaux(java.time.LocalDateTime.now());
+                    // S'assurer que la date de début est définie
+                    if (signalement.getDateDebutTravaux() == null) {
+                        signalement.setDateDebutTravaux(java.time.LocalDateTime.now());
+                    }
+                }
+                
                 // Créer l'entrée historique
                 SignalementHistorique historique = SignalementHistorique.builder()
                         .signalement(signalement)

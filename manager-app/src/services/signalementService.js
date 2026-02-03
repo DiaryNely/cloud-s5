@@ -44,7 +44,7 @@ export const updateSignalement = async (id, signalementData) => {
  * Met à jour uniquement le statut d'un signalement
  */
 export const updateSignalementStatut = async (id, statut) => {
-  const response = await api.patch(`/signalements/${id}/statut?statut=${statut}`);
+  const response = await api.patch(`/signalements/${id}/statut`, { statut });
   return response.data;
 };
 
@@ -64,6 +64,14 @@ export const getStatistiques = async () => {
 };
 
 /**
+ * Récupère les statistiques détaillées de traitement
+ */
+export const getStatistiquesDetaillees = async () => {
+  const response = await api.get('/signalements/statistiques/detaillees');
+  return response.data;
+};
+
+/**
  * Récupère l'historique des changements de statut
  */
 export const getHistorique = async (signalementId) => {
@@ -77,6 +85,24 @@ export const getHistorique = async (signalementId) => {
 export const getMesSignalements = async () => {
   const response = await api.get('/signalements/mes-signalements');
   return response.data;
+};
+
+/**
+ * Synchronise les signalements vers Firebase
+ */
+export const syncToFirebase = async () => {
+  const response = await api.post('/sync/signalements');
+  return response.data;
+};
+
+// Helper pour calculer l'avancement selon le statut
+export const getAvancementFromStatut = (statut) => {
+  const avancements = {
+    'nouveau': 0,
+    'en_cours': 50,
+    'termine': 100
+  };
+  return avancements[statut] || 0;
 };
 
 // Helper pour les labels de statut
@@ -103,6 +129,34 @@ export const getStatutColor = (statut) => {
   return colors[statut] || '#757575';
 };
 
+// Helper pour formater les dates
+export const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Helper pour calculer la durée de traitement
+export const calculerDureeTraitement = (dateDebut, dateFin) => {
+  if (!dateDebut || !dateFin) return null;
+  const debut = new Date(dateDebut);
+  const fin = new Date(dateFin);
+  const diffMs = fin - debut;
+  const diffJours = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHeures = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  
+  if (diffJours > 0) {
+    return `${diffJours}j ${diffHeures}h`;
+  }
+  return `${diffHeures}h`;
+};
+
 export default {
   getSignalements,
   getSignalementById,
@@ -112,8 +166,13 @@ export default {
   updateSignalementStatut,
   deleteSignalement,
   getStatistiques,
+  getStatistiquesDetaillees,
   getHistorique,
   getMesSignalements,
+  syncToFirebase,
+  getAvancementFromStatut,
   getStatutLabel,
-  getStatutColor
+  getStatutColor,
+  formatDate,
+  calculerDureeTraitement
 };

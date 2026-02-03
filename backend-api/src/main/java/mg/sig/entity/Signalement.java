@@ -67,6 +67,12 @@ public class Signalement {
     @Column(name = "last_firebase_sync")
     private LocalDateTime lastFirebaseSync;
 
+    @Column(name = "date_debut_travaux")
+    private LocalDateTime dateDebutTravaux;
+
+    @Column(name = "date_fin_travaux")
+    private LocalDateTime dateFinTravaux;
+
     @CreatedDate
     @Column(name = "date_creation", updatable = false)
     private LocalDateTime dateCreation;

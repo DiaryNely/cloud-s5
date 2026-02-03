@@ -12,6 +12,7 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import ListIcon from '@mui/icons-material/List';
 import HomeIcon from '@mui/icons-material/Home';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -101,6 +102,17 @@ const Header = () => {
                 }}
               >
                 Signalements
+              </Button>
+              <Button 
+                color="inherit" 
+                onClick={() => navigate('/dashboard/statistiques')}
+                startIcon={<AssessmentIcon />}
+                sx={{ 
+                  fontWeight: isActive('/dashboard/statistiques') ? 700 : 400,
+                  borderBottom: isActive('/dashboard/statistiques') ? '2px solid white' : 'none'
+                }}
+              >
+                Statistiques
               </Button>
               <Button 
                 color="inherit" 
