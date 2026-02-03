@@ -259,8 +259,6 @@ INSERT INTO entreprises (nom, adresse, telephone, email, contact_nom) VALUES
 INSERT INTO users (email, password_hash, nom, prenom, role_id, status_id, actif, bloque) VALUES
 ('admin@manager.mg', '$2a$10$Dr1y1oTiekZXU8P582RfpevoDqnGja5cFGjKDcW2OsLTi1VFHje6G', 'Admin', 'Manager', 1, 1, true, false);
 
-
-
 -- ============================================================
 -- FONCTIONS UTILITAIRES
 -- ============================================================
