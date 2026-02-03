@@ -86,6 +86,11 @@ public class Signalement {
     @Builder.Default
     private List<SignalementHistorique> historique = new ArrayList<>();
 
+    @OneToMany(mappedBy = "signalement", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OrderBy("dateAjout DESC")
+    @Builder.Default
+    private List<SignalementPhoto> photos = new ArrayList<>();
+
     /**
      * Retourne le nom de l'entreprise ou null
      */

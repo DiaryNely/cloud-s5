@@ -139,6 +139,38 @@
             </div>
           </div>
 
+          <!-- Section Photos -->
+          <div class="form-section">
+            <label class="field-label">
+              <ion-icon :icon="imagesOutline"></ion-icon>
+              Photos (optionnel)
+            </label>
+            <div class="photo-upload-area">
+              <input 
+                type="file" 
+                ref="photoInput"
+                @change="handlePhotoSelect" 
+                accept="image/*" 
+                multiple 
+                style="display: none"
+              />
+              <ion-button expand="block" fill="outline" @click="$refs.photoInput.click()" class="upload-btn">
+                <ion-icon slot="start" :icon="cameraOutline"></ion-icon>
+                Ajouter des photos
+              </ion-button>
+              
+              <div v-if="photos.length > 0" class="photos-preview">
+                <div v-for="(photo, index) in photos" :key="index" class="photo-item">
+                  <img :src="photo" alt="Photo" />
+                  <ion-button size="small" fill="clear" color="danger" @click="removePhoto(index)" class="remove-photo-btn">
+                    <ion-icon :icon="closeCircleOutline"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+              <p v-if="photos.length > 0" class="photo-count">{{ photos.length }} photo(s) ajoutée(s)</p>
+            </div>
+          </div>
+
           <div class="form-actions">
             <ion-button fill="outline" @click="activeStep = 0" class="back-action">
               <ion-icon slot="start" :icon="arrowBackOutline"></ion-icon>
@@ -185,7 +217,10 @@ import {
   resizeOutline,
   cashOutline,
   arrowForwardOutline,
-  arrowBackOutline
+  arrowBackOutline,
+  imagesOutline,
+  cameraOutline,
+  closeCircleOutline
 } from 'ionicons/icons';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -197,6 +232,8 @@ const { user } = useAuth();
 const activeStep = ref(0);
 const loading = ref(false);
 const mapContainer = ref(null);
+const photoInput = ref(null);
+const photos = ref([]);
 let map = null;
 let marker = null;
 
@@ -259,6 +296,25 @@ const handleNext = () => {
   activeStep.value = 1;
 };
 
+const handlePhotoSelect = (event) => {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  Array.from(files).forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        photos.value.push(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+};
+
+const removePhoto = (index) => {
+  photos.value.splice(index, 1);
+};
+
 const handleSubmit = async () => {
   loading.value = true;
 
@@ -269,7 +325,8 @@ const handleSubmit = async () => {
       longitude: formData.value.longitude,
       description: formData.value.description,
       surface: formData.value.surface,
-      budgetEstime: formData.value.budgetEstime
+      budgetEstime: formData.value.budgetEstime,
+      photos: photos.value
     };
 
     const result = await createSignalementWithOfflineSupport(signalementData);
@@ -299,6 +356,7 @@ const handleSubmit = async () => {
       surface: null,
       budgetEstime: null
     };
+    photos.value = [];
     activeStep.value = 0;
     if (marker) {
       map.removeLayer(marker);
@@ -554,6 +612,62 @@ const handleSubmit = async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+/* Photo Upload Styles */
+.photo-upload-area {
+  margin-top: 8px;
+}
+
+.upload-btn {
+  --border-width: 2px;
+  --border-style: dashed;
+  --border-color: var(--nexus-border-color);
+  --background: var(--nexus-bg-secondary);
+  --color: var(--nexus-text-secondary);
+  height: 48px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.photos-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.photo-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--nexus-radius-md);
+  overflow: hidden;
+  border: 2px solid var(--nexus-border-color);
+}
+
+.photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-photo-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  --background: rgba(255, 255, 255, 0.9);
+  --border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+}
+
+.photo-count {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--nexus-text-secondary);
+  margin-top: 8px;
+  font-weight: 500;
 }
 
 /* Form Actions */

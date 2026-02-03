@@ -50,6 +50,8 @@ import CircleIcon from '@mui/icons-material/Circle';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 
 const SignalementsPage = () => {
   const [signalements, setSignalements] = useState([]);
@@ -57,6 +59,7 @@ const SignalementsPage = () => {
   const [loading, setLoading] = useState(true);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openHistoryDialog, setOpenHistoryDialog] = useState(false);
+  const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [selectedSignalement, setSelectedSignalement] = useState(null);
   const [historique, setHistorique] = useState([]);
   const [editForm, setEditForm] = useState({});
@@ -147,6 +150,16 @@ const SignalementsPage = () => {
     setOpenHistoryDialog(false);
     setSelectedSignalement(null);
     setHistorique([]);
+  };
+
+  const handleOpenDetails = (signalement) => {
+    setSelectedSignalement(signalement);
+    setOpenDetailsDialog(true);
+  };
+
+  const handleCloseDetails = () => {
+    setOpenDetailsDialog(false);
+    setSelectedSignalement(null);
   };
 
   const formatDate = (dateString) => {
@@ -370,11 +383,120 @@ const SignalementsPage = () => {
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title="Voir détails">
+                        <IconButton
+                          size="small"
+                          color="info"
+                          onClick={() => handleOpenDetails(signalement)}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Historique">
                         <IconButton
                           size="small"
                           color="secondary"
                           onClick={() => handleOpenHistory(signalement)}
+                        >
+                          <HistoryIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* Dialog des détails avec photos */}
+      <Dialog open={openDetailsDialog} onClose={handleCloseDetails} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PhotoLibraryIcon />
+          Détails du signalement #{selectedSignalement?.id}
+        </DialogTitle>
+        <DialogContent>
+          {selectedSignalement && (
+            <Box sx={{ pt: 2 }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Informations générales
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography><strong>Localisation:</strong> {selectedSignalement.localisation}</Typography>
+                    <Typography><strong>Description:</strong> {selectedSignalement.description}</Typography>
+                    <Typography><strong>Surface:</strong> {selectedSignalement.surface} m²</Typography>
+                    <Typography><strong>Budget:</strong> {formatBudget(selectedSignalement.budgetEstime)}</Typography>
+                    <Typography><strong>Statut:</strong> <Chip 
+                      label={getStatutLabel(selectedSignalement.statut)} 
+                      size="small"
+                      sx={{
+                        backgroundColor: getStatutColor(selectedSignalement.statut),
+                        color: 'white'
+                      }}
+                    /></Typography>
+                    <Typography><strong>Avancement:</strong> {selectedSignalement.avancement ?? getAvancementFromStatut(selectedSignalement.statut)}%</Typography>
+                    {selectedSignalement.entreprise && (
+                      <Typography><strong>Entreprise:</strong> {selectedSignalement.entreprise}</Typography>
+                    )}
+                    <Typography><strong>Créé par:</strong> {selectedSignalement.creePar}</Typography>
+                    <Typography><strong>Date de création:</strong> {formatDate(selectedSignalement.dateCreation)}</Typography>
+                  </Box>
+                </Grid>
+
+                {selectedSignalement.photos && selectedSignalement.photos.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                      Photos ({selectedSignalement.photos.length})
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {selectedSignalement.photos.map((photo, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={index}>
+                          <Box
+                            component="img"
+                            src={photo}
+                            alt={`Photo ${index + 1}`}
+                            sx={{
+                              width: '100%',
+                              height: 200,
+                              objectFit: 'cover',
+                              borderRadius: 2,
+                              border: '2px solid #e0e0e0',
+                              cursor: 'pointer',
+                              transition: 'transform 0.2s',
+                              '&:hover': {
+                                transform: 'scale(1.05)'
+                              }
+                            }}
+                            onClick={() => window.open(photo, '_blank')}
+                          />
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Grid>
+                )}
+
+                {(!selectedSignalement.photos || selectedSignalement.photos.length === 0) && (
+                  <Grid item xs={12}>
+                    <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                      <PhotoLibraryIcon sx={{ fontSize: 60, opacity: 0.3, mb: 2 }} />
+                      <Typography>Aucune photo disponible pour ce signalement</Typography>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetails}>Fermer</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de modification */}
                         >
                           <HistoryIcon fontSize="small" />
                         </IconButton>
@@ -588,6 +710,127 @@ const SignalementsPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseHistory}>Fermer</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de détails avec photos */}
+      <Dialog open={openDetailsDialog} onClose={handleCloseDetails} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PhotoLibraryIcon />
+          Détails du signalement #{selectedSignalement?.id}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            {/* Informations générales */}
+            <Paper sx={{ p: 3, mb: 3, bgcolor: '#f5f5f5' }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    {selectedSignalement?.localisation}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body1" color="text.secondary">
+                    <strong>Description:</strong> {selectedSignalement?.description}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Surface:</strong> {selectedSignalement?.surface} m²
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Budget:</strong> {formatBudget(selectedSignalement?.budgetEstime || 0)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Statut:</strong> {' '}
+                    <Chip
+                      label={getStatutLabel(selectedSignalement?.statut)}
+                      size="small"
+                      sx={{
+                        backgroundColor: getStatutColor(selectedSignalement?.statut),
+                        color: 'white',
+                        fontWeight: 600
+                      }}
+                    />
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Avancement:</strong> {selectedSignalement?.avancement ?? getAvancementFromStatut(selectedSignalement?.statut)}%
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2">
+                    <strong>Créé par:</strong> {selectedSignalement?.creePar}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2">
+                    <strong>Date création:</strong> {formatDate(selectedSignalement?.dateCreation)}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* Photos */}
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PhotoLibraryIcon />
+                Photos ({selectedSignalement?.photos?.length || 0})
+              </Typography>
+              {selectedSignalement?.photos && selectedSignalement.photos.length > 0 ? (
+                <Grid container spacing={2}>
+                  {selectedSignalement.photos.map((photo, index) => (
+                    <Grid item xs={6} sm={4} key={index}>
+                      <Paper
+                        elevation={2}
+                        sx={{
+                          position: 'relative',
+                          paddingTop: '100%',
+                          overflow: 'hidden',
+                          borderRadius: 2,
+                          cursor: 'pointer',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                            transition: 'transform 0.2s'
+                          }
+                        }}
+                        onClick={() => window.open(photo, '_blank')}
+                      >
+                        <Box
+                          component="img"
+                          src={photo}
+                          alt={`Photo ${index + 1}`}
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Paper sx={{ p: 4, textAlign: 'center', bgcolor: '#f9f9f9' }}>
+                  <PhotoLibraryIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
+                  <Typography variant="body1" color="text.secondary">
+                    Aucune photo disponible pour ce signalement
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetails}>Fermer</Button>
         </DialogActions>
       </Dialog>
     </Container>

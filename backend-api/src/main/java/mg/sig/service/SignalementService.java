@@ -29,6 +29,7 @@ public class SignalementService {
     private final SignalementRepository signalementRepository;
     private final SignalementStatusRepository statusRepository;
     private final SignalementHistoriqueRepository historiqueRepository;
+    private final SignalementPhotoRepository photoRepository;
     private final EntrepriseRepository entrepriseRepository;
     private final UserRepository userRepository;
     private final SignalementMapper signalementMapper;
@@ -94,6 +95,18 @@ public class SignalementService {
                 .build();
 
         signalement = signalementRepository.save(signalement);
+
+        // Sauvegarder les photos si présentes
+        if (request.getPhotos() != null && !request.getPhotos().isEmpty()) {
+            for (String photoData : request.getPhotos()) {
+                SignalementPhoto photo = SignalementPhoto.builder()
+                        .signalement(signalement)
+                        .photoBase64(photoData)
+                        .photoUrl(photoData.startsWith("data:") ? "base64" : photoData)
+                        .build();
+                photoRepository.save(photo);
+            }
+        }
 
         // Créer l'entrée historique
         SignalementHistorique historique = SignalementHistorique.builder()

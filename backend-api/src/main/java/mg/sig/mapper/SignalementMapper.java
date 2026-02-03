@@ -17,6 +17,7 @@ public interface SignalementMapper {
     @Mapping(target = "entreprise", source = "entreprise.nom")
     @Mapping(target = "creePar", source = "creePar", qualifiedByName = "userToNomComplet")
     @Mapping(target = "avancement", source = "status.code", qualifiedByName = "statusToAvancement")
+    @Mapping(target = "photos", source = "photos", qualifiedByName = "photosToUrls")
     SignalementDTO toDTO(Signalement entity);
 
     @Named("statusCodeToLowerCase")
@@ -38,5 +39,15 @@ public interface SignalementMapper {
             case "TERMINE" -> 100;
             default -> 0;
         };
+    }
+
+    @Named("photosToUrls")
+    default java.util.List<String> photosToUrls(java.util.List<SignalementPhoto> photos) {
+        if (photos == null || photos.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return photos.stream()
+                .map(photo -> photo.getPhotoBase64() != null ? photo.getPhotoBase64() : photo.getPhotoUrl())
+                .collect(java.util.stream.Collectors.toList());
     }
 }

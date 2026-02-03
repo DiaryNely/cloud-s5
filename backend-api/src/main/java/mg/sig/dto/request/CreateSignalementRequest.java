@@ -44,4 +44,7 @@ public class CreateSignalementRequest {
     @DecimalMin(value = "0.0", message = "Le budget doit être positif")
     @Schema(description = "Budget estimé en MGA", example = "45000000")
     private BigDecimal budgetEstime;
+
+    @Schema(description = "Liste des photos encodées en base64")
+    private java.util.List<String> photos;
 }

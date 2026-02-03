@@ -64,4 +64,7 @@ public class SignalementDTO {
 
     @Schema(description = "Adresse/localisation", example = "Avenue de l'Indépendance")
     private String localisation;
+
+    @Schema(description = "Liste des URLs des photos")
+    private java.util.List<String> photos;
 }
