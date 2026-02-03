@@ -1,0 +1,130 @@
+spring:
+  application:
+    name: signalement-backend-api
+    
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+    
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:signalements_db}
+    username: ${DB_USERNAME:sig_user}
+    password: ${DB_PASSWORD:sig_password_2026}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: Africa/Nairobi
+          
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ss
+    time-zone: Africa/Nairobi
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-token-generation-must-be-at-least-256-bits}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 heures en millisecondes
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 jours
+
+# Firebase Configuration
+firebase:
+  enabled: ${FIREBASE_ENABLED:true}
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:firebase-credentials.json}
+  database-url: ${FIREBASE_DATABASE_URL:https://signalement-routier-default-rtdb.europe-west1.firebasedatabase.app}
+  sync:
+    enabled: ${FIREBASE_SYNC_ENABLED:true}
+    cron: "0 */5 * * * *" # Toutes les 5 minutes
+
+# Map Tiles Configuration
+map:
+  tiles:
+    url: ${MAP_TILES_URL:http://localhost:8081/tile/{z}/{x}/{y}.png}
+    center:
+      latitude: -18.8792
+      longitude: 47.5079
+    default-zoom: 13
+    min-zoom: 10
+    max-zoom: 18
+
+# Security Settings
+security:
+  max-login-attempts: ${MAX_LOGIN_ATTEMPTS:3}
+  session-duration-hours: ${SESSION_DURATION_HOURS:24}
+  lockout-duration-minutes: ${LOCKOUT_DURATION_MINUTES:30}
+
+# Swagger / OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: true
+  
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Logging
+logging:
+  level:
+    root: INFO
+    mg.sig: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+---
+# Profile: Development
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+---
+# Profile: Production
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+      
+logging:
+  level:
+    root: WARN
+    mg.sig: INFO
