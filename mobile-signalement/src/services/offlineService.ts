@@ -130,6 +130,7 @@ export const createSignalementWithOfflineSupport = async (data: {
   description: string;
   surface: number;
   budgetEstime: number;
+  photos?: string[];
 }): Promise<{ success: boolean; offline: boolean; signalement?: Signalement }> => {
 
   // Firebase First: on écrit toujours, le SDK gère le offline

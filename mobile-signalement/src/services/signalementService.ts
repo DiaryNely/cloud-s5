@@ -149,6 +149,7 @@ export const createSignalement = async (data: {
   description: string;
   surface: number;
   budgetEstime: number;
+  photos?: string[];
 }): Promise<Signalement> => {
   const isConnected = await isConnectedToInternet();
 
@@ -159,6 +160,7 @@ export const createSignalement = async (data: {
 
       const dataToSave = {
         ...data,
+        photos: data.photos || [],
         dateCreation: new Date().toISOString(),
         statut: 'NOUVEAU',
         syncedWithPostgres: false
@@ -173,7 +175,7 @@ export const createSignalement = async (data: {
         id: 0,
         firebaseId: newSignalementRef.key,
         creePar: '',
-        photos: []
+        photos: data.photos || []
       } as unknown as Signalement;
 
     } catch (e) {
