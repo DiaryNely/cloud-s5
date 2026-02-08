@@ -175,11 +175,12 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getStatutLabel, getStatutColor } from '../services/signalementService';
+import api from '../services/api';
 import { 
-  getSignalementsWithOfflineSupport, 
   syncPendingSignalements,
   isOnline as checkOnline,
-  onNetworkChange 
+  onNetworkChange,
+  getLocalSignalements
 } from '../services/offlineService';
 import { useAuth } from '../composables/useAuth';
 
@@ -202,19 +203,43 @@ const filteredSignalements = computed(() => {
   if (selectedFilter.value === 'tous') {
     return mesSignalements.value;
   }
-  return mesSignalements.value.filter(s => s.statut === selectedFilter.value);
+  return mesSignalements.value.filter(s => {
+    const statut = (s.statut || '').toUpperCase();
+    const filter = selectedFilter.value.toUpperCase();
+    return statut === filter;
+  });
 });
 
 const loadSignalements = async () => {
   loading.value = true;
   try {
-    const result = await getSignalementsWithOfflineSupport();
-    mesSignalements.value = result.signalements;
-    isFromCache.value = result.isFromCache;
-    pendingCount.value = result.pendingCount;
+    const online = await checkOnline();
+    if (online) {
+      // Utiliser l'API REST qui filtre côté serveur par l'utilisateur connecté (JWT)
+      const response = await api.get('/signalements/mes-signalements');
+      mesSignalements.value = response.data || [];
+      isFromCache.value = false;
+    } else {
+      // Mode offline : données locales filtrées par email
+      const cached = await getLocalSignalements();
+      const userEmail = user.value?.email || '';
+      mesSignalements.value = userEmail
+        ? cached.filter(s => s.creePar === userEmail)
+        : cached;
+      isFromCache.value = true;
+    }
+    pendingCount.value = 0;
     updateMap();
   } catch (error) {
     console.error('Erreur chargement signalements:', error);
+    // Fallback : données locales
+    try {
+      const cached = await getLocalSignalements();
+      mesSignalements.value = cached;
+      isFromCache.value = true;
+    } catch (e) {
+      mesSignalements.value = [];
+    }
   } finally {
     loading.value = false;
   }
@@ -225,8 +250,8 @@ const initMap = () => {
   
   map = L.map('user-map').setView([-18.8792, 47.5079], 12);
   
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
+  L.tileLayer('http://localhost:8081/styles/basic-preview/{z}/{x}/{y}.png', {
+    attribution: '© TileServer GL'
   }).addTo(map);
   
   updateMap();

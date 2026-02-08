@@ -152,8 +152,8 @@ onMounted(() => {
   setTimeout(() => {
     map = L.map('map').setView([-18.9137, 47.5267], 13);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
+    L.tileLayer('http://localhost:8081/styles/basic-preview/{z}/{x}/{y}.png', {
+      attribution: '© TileServer GL'
     }).addTo(map);
 
     loadData();

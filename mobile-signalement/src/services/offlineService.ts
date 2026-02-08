@@ -93,27 +93,30 @@ export const refreshLocalData = async (): Promise<boolean> => {
 /**
  * Récupère les signalements (online ou offline)
  */
-export const getSignalementsWithOfflineSupport = async (): Promise<{
+export const getSignalementsWithOfflineSupport = async (userEmail?: string): Promise<{
   signalements: Signalement[];
   isFromCache: boolean;
   pendingCount: number;
 }> => {
   // Avec Firebase, on appelle juste le service qui a le listener
-  // Utilisation de Promise wrapper simple ici
   try {
-    // Note: getSignalements dans signalementService utilise onValue
-    // Pour cet appel unique, on pourrait utiliser get() mais onValue est mieux
-    // On va faire un appel unique via le service
-    const signalements = await signalementService.getSignalements();
+    const allSignalements = await signalementService.getSignalements();
+    // Filtrer par l'utilisateur connecté si un email est fourni
+    const signalements = userEmail 
+      ? allSignalements.filter(s => s.creePar === userEmail)
+      : allSignalements;
     return {
       signalements,
-      isFromCache: false, // Difficile à dire avec Firebase, on assume false (synced)
+      isFromCache: false,
       pendingCount: 0
     };
   } catch (error) {
     const cached = await getLocalSignalements();
+    const signalements = userEmail
+      ? cached.filter(s => s.creePar === userEmail)
+      : cached;
     return {
-      signalements: cached,
+      signalements,
       isFromCache: true,
       pendingCount: 0
     };
@@ -131,6 +134,7 @@ export const createSignalementWithOfflineSupport = async (data: {
   surface: number;
   budgetEstime: number;
   photos?: string[];
+  creePar?: string;
 }): Promise<{ success: boolean; offline: boolean; signalement?: Signalement }> => {
 
   // Firebase First: on écrit toujours, le SDK gère le offline

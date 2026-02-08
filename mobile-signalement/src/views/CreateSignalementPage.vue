@@ -225,6 +225,7 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { createSignalementWithOfflineSupport, isOnline as checkOnline } from '../services/offlineService';
+import { uploadPhotos } from '../services/api';
 import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
@@ -251,8 +252,8 @@ const initMap = async () => {
   await nextTick();
   map = L.map(mapContainer.value).setView([-18.9137, 47.5267], 13);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
+  L.tileLayer('http://localhost:8081/styles/basic-preview/{z}/{x}/{y}.png', {
+    attribution: '© TileServer GL'
   }).addTo(map);
 
   map.on('click', (e) => {
@@ -319,6 +320,18 @@ const handleSubmit = async () => {
   loading.value = true;
 
   try {
+    // Upload les photos vers le backend d'abord pour obtenir des URLs
+    let photoUrls = [];
+    if (photos.value.length > 0) {
+      const online = await checkOnline();
+      if (online) {
+        photoUrls = await uploadPhotos(photos.value);
+        if (photoUrls.length === 0 && photos.value.length > 0) {
+          console.warn('Upload photos échoué, les photos ne seront pas incluses');
+        }
+      }
+    }
+
     const signalementData = {
       localisation: formData.value.localisation,
       latitude: formData.value.latitude,
@@ -326,7 +339,8 @@ const handleSubmit = async () => {
       description: formData.value.description,
       surface: formData.value.surface,
       budgetEstime: formData.value.budgetEstime,
-      photos: photos.value
+      photos: photoUrls,
+      creePar: user.value?.email || ''
     };
 
     const result = await createSignalementWithOfflineSupport(signalementData);

@@ -150,6 +150,7 @@ export const createSignalement = async (data: {
   surface: number;
   budgetEstime: number;
   photos?: string[];
+  creePar?: string;
 }): Promise<Signalement> => {
   const isConnected = await isConnectedToInternet();
 
@@ -161,6 +162,7 @@ export const createSignalement = async (data: {
       const dataToSave = {
         ...data,
         photos: data.photos || [],
+        creePar: data.creePar || '',
         dateCreation: new Date().toISOString(),
         statut: 'NOUVEAU',
         syncedWithPostgres: false

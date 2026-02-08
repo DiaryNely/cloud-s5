@@ -35,8 +35,9 @@ import java.util.Optional;
 public class FirebaseService {
 
     private final SignalementRepository signalementRepository;
+    private final SignalementPhotoRepository signalementPhotoRepository;
     private final UserRepository userRepository;
-    private final SignalementStatusRepository signalementStatusRepository; // Inject status repository
+    private final SignalementStatusRepository signalementStatusRepository;
     private final AuditService auditService;
 
     @Value("${firebase.enabled:false}")
@@ -305,15 +306,40 @@ public class FirebaseService {
             }
             s.setStatus(status);
 
-            // User (CreePar)
-            // TODO: Récupérer le vrai user depuis Firebase Auth ou un champ userId dans le
-            // payload
-            // Pour l'instant on prend le premier admin ou user système
-            User defaultUser = userRepository.findById(1)
-                    .orElseThrow(() -> new RuntimeException("User par défaut introuvable"));
-            s.setCreePar(defaultUser);
+            // User (CreePar) - chercher par email depuis le champ creePar de Firebase
+            User createur = null;
+            if (snapshot.hasChild("creePar")) {
+                String creeParEmail = snapshot.child("creePar").getValue(String.class);
+                if (creeParEmail != null && !creeParEmail.isEmpty()) {
+                    createur = userRepository.findByEmailIgnoreCase(creeParEmail).orElse(null);
+                }
+            }
+            if (createur == null) {
+                // Fallback: prendre le premier user
+                createur = userRepository.findById(1)
+                        .orElseThrow(() -> new RuntimeException("User par défaut introuvable"));
+            }
+            s.setCreePar(createur);
 
             signalementRepository.save(s);
+
+            // Sauvegarder les photos si présentes
+            if (snapshot.hasChild("photos")) {
+                DataSnapshot photosSnapshot = snapshot.child("photos");
+                for (DataSnapshot photoSnap : photosSnapshot.getChildren()) {
+                    String photoUrl = photoSnap.getValue(String.class);
+                    if (photoUrl != null && !photoUrl.isEmpty()) {
+                        SignalementPhoto photo = SignalementPhoto.builder()
+                                .signalement(s)
+                                .photoUrl(photoUrl)
+                                .build();
+                        // Need to inject photoRepository
+                        signalementPhotoRepository.save(photo);
+                    }
+                }
+                log.info("Sauvegardé {} photos pour signalement {}", photosSnapshot.getChildrenCount(), firebaseId);
+            }
+
             log.info("Signalement {} sauvegardé dans PostgreSQL (ID: {})", firebaseId, s.getId());
 
         } catch (Exception e) {
@@ -335,6 +361,17 @@ public class FirebaseService {
         map.put("creePar", s.getCreateurNom());
         map.put("dateCreation",
                 s.getDateCreation() != null ? s.getDateCreation().toString() : LocalDateTime.now().toString());
+
+        // Inclure les photos URLs
+        if (s.getPhotos() != null && !s.getPhotos().isEmpty()) {
+            List<String> photoUrls = s.getPhotos().stream()
+                    .map(photo -> photo.getPhotoUrl() != null && !"base64".equals(photo.getPhotoUrl())
+                            ? photo.getPhotoUrl() : null)
+                    .filter(url -> url != null)
+                    .collect(java.util.stream.Collectors.toList());
+            map.put("photos", photoUrls);
+        }
+
         return map;
     }
 

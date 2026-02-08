@@ -75,6 +75,24 @@ api.interceptors.response.use(
 
 export default api;
 
+/**
+ * Upload des photos base64 vers le backend et retourne les URLs
+ */
+export const uploadPhotos = async (base64Photos: string[]): Promise<string[]> => {
+  try {
+    const response = await api.post('/photos/upload-base64', {
+      photos: base64Photos
+    });
+    if (response.data.success) {
+      return response.data.urls;
+    }
+    return [];
+  } catch (error) {
+    console.error('Erreur upload photos:', error);
+    return [];
+  }
+};
+
 // Types
 export interface Signalement {
   id: number;

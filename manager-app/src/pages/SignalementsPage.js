@@ -181,6 +181,21 @@ const SignalementsPage = () => {
     }).format(budget);
   };
 
+  // Construire l'URL complète d'une photo
+  const getPhotoUrl = (photo) => {
+    if (!photo) return '';
+    // Si c'est déjà une URL complète (http/https)
+    if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
+    // Si c'est une URL relative commençant par /uploads/
+    if (photo.startsWith('/uploads/')) {
+      const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+      return apiBase + photo;
+    }
+    // Si c'est du base64 (ancien format)
+    if (photo.startsWith('data:')) return photo;
+    return photo;
+  };
+
   const stats = {
     total: signalements.length,
     nouveaux: signalements.filter(s => s.statut === 'nouveau').length,
@@ -457,7 +472,7 @@ const SignalementsPage = () => {
                         <Grid item xs={12} sm={6} md={4} key={index}>
                           <Box
                             component="img"
-                            src={photo}
+                            src={getPhotoUrl(photo)}
                             alt={`Photo ${index + 1}`}
                             sx={{
                               width: '100%',
@@ -471,7 +486,7 @@ const SignalementsPage = () => {
                                 transform: 'scale(1.05)'
                               }
                             }}
-                            onClick={() => window.open(photo, '_blank')}
+                            onClick={() => window.open(getPhotoUrl(photo), '_blank')}
                           />
                         </Grid>
                       ))}

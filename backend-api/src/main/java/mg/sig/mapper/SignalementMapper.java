@@ -47,7 +47,15 @@ public interface SignalementMapper {
             return java.util.Collections.emptyList();
         }
         return photos.stream()
-                .map(photo -> photo.getPhotoBase64() != null ? photo.getPhotoBase64() : photo.getPhotoUrl())
+                .map(photo -> {
+                    // Priorité : URL du fichier stocké localement
+                    if (photo.getPhotoUrl() != null && !photo.getPhotoUrl().equals("base64")) {
+                        return photo.getPhotoUrl();
+                    }
+                    // Fallback base64 (ancien format)
+                    return photo.getPhotoBase64() != null ? photo.getPhotoBase64() : photo.getPhotoUrl();
+                })
+                .filter(java.util.Objects::nonNull)
                 .collect(java.util.stream.Collectors.toList());
     }
 }

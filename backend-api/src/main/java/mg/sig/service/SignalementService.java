@@ -99,11 +99,21 @@ public class SignalementService {
         // Sauvegarder les photos si présentes
         if (request.getPhotos() != null && !request.getPhotos().isEmpty()) {
             for (String photoData : request.getPhotos()) {
-                SignalementPhoto photo = SignalementPhoto.builder()
-                        .signalement(signalement)
-                        .photoBase64(photoData)
-                        .photoUrl(photoData.startsWith("data:") ? "base64" : photoData)
-                        .build();
+                SignalementPhoto photo;
+                if (photoData.startsWith("data:")) {
+                    // Ancien format base64 - stocker tel quel
+                    photo = SignalementPhoto.builder()
+                            .signalement(signalement)
+                            .photoBase64(photoData)
+                            .photoUrl("base64")
+                            .build();
+                } else {
+                    // Nouveau format - URL du fichier stocké
+                    photo = SignalementPhoto.builder()
+                            .signalement(signalement)
+                            .photoUrl(photoData)
+                            .build();
+                }
                 photoRepository.save(photo);
             }
         }

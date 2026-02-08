@@ -39,6 +39,16 @@ server:
   servlet:
     context-path: /api
 
+# Upload Configuration  
+app:
+  upload:
+    dir: uploads/photos
+
+spring.servlet.multipart:
+  enabled: true
+  max-file-size: 10MB
+  max-request-size: 50MB
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-token-generation-must-be-at-least-256-bits}
@@ -57,7 +67,7 @@ firebase:
 # Map Tiles Configuration
 map:
   tiles:
-    url: ${MAP_TILES_URL:http://localhost:8081/tile/{z}/{x}/{y}.png}
+    url: ${MAP_TILES_URL:http://localhost:8081/styles/basic-preview/{z}/{x}/{y}.png}
     center:
       latitude: -18.8792
       longitude: 47.5079

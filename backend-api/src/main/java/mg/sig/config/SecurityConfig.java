@@ -47,6 +47,10 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 
+                // Photos - accès public aux fichiers uploadés
+                .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/photos/**").permitAll()
+                
                 // Signalements - lecture publique
                 .requestMatchers(HttpMethod.GET, "/signalements").permitAll()
                 .requestMatchers(HttpMethod.GET, "/signalements/statistiques").permitAll()
