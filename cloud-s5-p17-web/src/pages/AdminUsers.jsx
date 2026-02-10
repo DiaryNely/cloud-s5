@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "../api/client.js";
-import { fetchUsers as apiFetchUsers, blockUser as apiBlockUser, unblockUser as apiUnblockUser, deleteUser as apiDeleteUser, syncToFirebase as apiSyncToFirebase } from "../api/users.js";
+import { fetchUsers as apiFetchUsers, blockUser as apiBlockUser, unblockUser as apiUnblockUser, deleteUser as apiDeleteUser } from "../api/users.js";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -14,10 +14,6 @@ export default function AdminUsers() {
 
   const [editingUser, setEditingUser] = useState(null);
   const [userEdits, setUserEdits] = useState({});
-
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncMessage, setSyncMessage] = useState(null);
-  const [syncError, setSyncError] = useState(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -90,22 +86,6 @@ export default function AdminUsers() {
     }
   };
 
-  const syncToFirebase = async () => {
-    if (!confirm("Voulez-vous synchroniser tous les utilisateurs non synchronisés vers Firebase ?")) return;
-    setSyncLoading(true);
-    setSyncError(null);
-    setSyncMessage(null);
-    try {
-      const data = await apiSyncToFirebase();
-      setSyncMessage(`✅ ${data.syncedCount || 0} utilisateur(s) synchronisé(s) avec succès !`);
-      await loadUsers();
-    } catch (err) {
-      setSyncError(err?.response?.data?.error || "Erreur lors de la synchronisation");
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
   const onUserEditChange = (uid, field, value) => {
     setUserEdits(prev => ({ ...prev, [uid]: { ...prev[uid], [field]: value } }));
   };
@@ -119,17 +99,11 @@ export default function AdminUsers() {
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button className="secondary" onClick={loadUsers}>🔄 Rafraîchir</button>
-          <button className="warning" onClick={syncToFirebase} disabled={syncLoading}>
-            {syncLoading ? "⏳ Sync..." : "🔄 Sync Firebase"}
-          </button>
           <button className="primary" onClick={() => setShowUserForm(!showUserForm)}>
             {showUserForm ? "❌ Annuler" : "➕ Créer"}
           </button>
         </div>
       </div>
-
-      {syncMessage && <div className="alert success">{syncMessage}</div>}
-      {syncError && <div className="alert error">{syncError}</div>}
 
       {showUserForm && (
         <div className="card" style={{ marginBottom: 24 }}>

@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,6 +44,9 @@ import mg.uem.mg.clouds5p17authapi.service.SyncService;
 public class AdminController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminController.class);
+
+    @Value("${auth.mode:auto}")
+    private String authMode;
 
     private final UserRepository userRepository;
     private final HybridAuthService hybridAuthService;
@@ -74,46 +79,44 @@ public class AdminController {
                 .collect(Collectors.toList());
         users.addAll(localUsers);
         
-        // 2. Ajouter les utilisateurs de Firebase qui ne sont pas déjà en local
-        try {
-            com.google.firebase.auth.ListUsersPage page = com.google.firebase.auth.FirebaseAuth.getInstance().listUsers(null);
-            while (page != null) {
-                for (com.google.firebase.auth.UserRecord firebaseUser : page.getValues()) {
-                    // Vérifier si l'utilisateur existe déjà en local
-                    boolean existsLocally = localUsers.stream()
-                            .anyMatch(u -> u.email().equals(firebaseUser.getEmail()));
-                    
-                    if (!existsLocally) {
-                        // Créer un DTO pour l'utilisateur Firebase
-                        String role = "UTILISATEUR";
-                        if (firebaseUser.getCustomClaims() != null && firebaseUser.getCustomClaims().get("role") != null) {
-                            role = firebaseUser.getCustomClaims().get("role").toString();
+        // 2. En mode local, on ne va pas chercher les utilisateurs Firebase
+        if (!"local".equalsIgnoreCase(authMode)) {
+            try {
+                com.google.firebase.auth.ListUsersPage page = com.google.firebase.auth.FirebaseAuth.getInstance().listUsers(null);
+                while (page != null) {
+                    for (com.google.firebase.auth.UserRecord firebaseUser : page.getValues()) {
+                        boolean existsLocally = localUsers.stream()
+                                .anyMatch(u -> u.email().equals(firebaseUser.getEmail()));
+                        
+                        if (!existsLocally) {
+                            String role = "UTILISATEUR";
+                            if (firebaseUser.getCustomClaims() != null && firebaseUser.getCustomClaims().get("role") != null) {
+                                role = firebaseUser.getCustomClaims().get("role").toString();
+                            }
+                            
+                            boolean temporarilyBlocked = loginAttemptService.isBlocked(firebaseUser.getEmail());
+                            
+                            AdminUserDto dto = new AdminUserDto(
+                                    firebaseUser.getUid(),
+                                    firebaseUser.getEmail(),
+                                    role,
+                                    firebaseUser.getDisplayName() != null ? firebaseUser.getDisplayName().split(" ")[0] : null,
+                                    firebaseUser.getDisplayName() != null && firebaseUser.getDisplayName().contains(" ") 
+                                        ? firebaseUser.getDisplayName().substring(firebaseUser.getDisplayName().indexOf(" ") + 1) : null,
+                                    null,
+                                    firebaseUser.isDisabled() || temporarilyBlocked,
+                                    null,
+                                    true,
+                                    firebaseUser.getUid()
+                            );
+                            users.add(dto);
                         }
-                        
-                        // Vérifier si l'utilisateur est temporairement bloqué (tentatives échouées)
-                        boolean temporarilyBlocked = loginAttemptService.isBlocked(firebaseUser.getEmail());
-                        
-                        AdminUserDto dto = new AdminUserDto(
-                                firebaseUser.getUid(),
-                                firebaseUser.getEmail(),
-                                role,
-                                firebaseUser.getDisplayName() != null ? firebaseUser.getDisplayName().split(" ")[0] : null,
-                                firebaseUser.getDisplayName() != null && firebaseUser.getDisplayName().contains(" ") 
-                                    ? firebaseUser.getDisplayName().substring(firebaseUser.getDisplayName().indexOf(" ") + 1) : null,
-                                null,
-                                firebaseUser.isDisabled() || temporarilyBlocked, // Bloqué si désactivé OU temporairement bloqué
-                                null,
-                                true,
-                                firebaseUser.getUid()
-                        );
-                        users.add(dto);
                     }
+                    page = page.getNextPage();
                 }
-                page = page.getNextPage();
+            } catch (Exception e) {
+                log.warn("Erreur lors de la récupération des utilisateurs Firebase: {}", e.getMessage());
             }
-        } catch (com.google.firebase.auth.FirebaseAuthException e) {
-            // En cas d'erreur Firebase, on retourne juste les utilisateurs locaux
-            System.err.println("Erreur lors de la récupération des utilisateurs Firebase: " + e.getMessage());
         }
         
         // Filtrer si nécessaire
@@ -341,61 +344,61 @@ public class AdminController {
                 .body(Map.of("error", "Utilisateur non trouvé", "uid", uid)));
     }
 
-    @Operation(summary = "Synchroniser vers Firebase", description = "Synchronise tous les utilisateurs non synchronisés de PostgreSQL vers Firebase")
+    @Operation(summary = "Synchroniser vers Firebase", description = "Synchronise tous les utilisateurs et signalements locaux vers Firebase (Auth + Realtime DB)")
     @PostMapping("/sync-to-firebase")
     public ResponseEntity<?> syncToFirebase() {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            // 1. Synchroniser les utilisateurs
-            List<User> unsyncedUsers = userRepository.findBySyncedToFirebaseFalse();
+            // ========== 1. Synchroniser les UTILISATEURS ==========
+            List<User> allUsers = userRepository.findAll();
             int syncedUsersCount = 0;
             int failedUsersCount = 0;
             List<String> errors = new java.util.ArrayList<>();
             
-            for (User user : unsyncedUsers) {
+            for (User user : allUsers) {
                 try {
-                    // Vérifier si l'utilisateur existe déjà dans Firebase par email
-                    com.google.firebase.auth.UserRecord existingUser = null;
-                    try {
-                        existingUser = com.google.firebase.auth.FirebaseAuth.getInstance().getUserByEmail(user.getEmail());
-                    } catch (com.google.firebase.auth.FirebaseAuthException e) {
-                        // L'utilisateur n'existe pas dans Firebase, c'est normal
-                    }
-                    
-                    if (existingUser != null) {
-                        // L'utilisateur existe déjà dans Firebase, juste mettre à jour le statut local
+                    // a) Sync vers Firebase Auth (créer le compte si nécessaire)
+                    if (!Boolean.TRUE.equals(user.getSyncedToFirebase())) {
+                        com.google.firebase.auth.UserRecord existingUser = null;
+                        try {
+                            existingUser = com.google.firebase.auth.FirebaseAuth.getInstance().getUserByEmail(user.getEmail());
+                        } catch (com.google.firebase.auth.FirebaseAuthException e) {
+                            // L'utilisateur n'existe pas dans Firebase, c'est normal
+                        }
+                        
+                        if (existingUser != null) {
+                            user.setFirebaseUid(existingUser.getUid());
+                        } else {
+                            // Créer l'utilisateur dans Firebase Auth
+                            com.google.firebase.auth.UserRecord.CreateRequest request = 
+                                new com.google.firebase.auth.UserRecord.CreateRequest()
+                                    .setEmail(user.getEmail())
+                                    .setPassword(generateTemporaryPassword())
+                                    .setEmailVerified(true);
+                            
+                            if (user.getPrenom() != null || user.getNom() != null) {
+                                String displayName = (user.getPrenom() != null ? user.getPrenom() : "") + " " + 
+                                                   (user.getNom() != null ? user.getNom() : "");
+                                request.setDisplayName(displayName.trim());
+                            }
+                            
+                            com.google.firebase.auth.UserRecord firebaseUser = 
+                                com.google.firebase.auth.FirebaseAuth.getInstance().createUser(request);
+                            user.setFirebaseUid(firebaseUser.getUid());
+                            
+                            // Set custom claims (role)
+                            Map<String, Object> claims = new HashMap<>();
+                            claims.put("role", user.getRole());
+                            com.google.firebase.auth.FirebaseAuth.getInstance().setCustomUserClaims(firebaseUser.getUid(), claims);
+                        }
+                        
                         user.setSyncedToFirebase(true);
-                        user.setFirebaseUid(existingUser.getUid());
                         userRepository.save(user);
-                        syncedUsersCount++;
-                        continue;
                     }
                     
-                    // Créer l'utilisateur dans Firebase
-                    com.google.firebase.auth.UserRecord.CreateRequest request = 
-                        new com.google.firebase.auth.UserRecord.CreateRequest()
-                            .setEmail(user.getEmail())
-                            .setPassword(generateTemporaryPassword())
-                            .setEmailVerified(true);
-                    
-                    if (user.getPrenom() != null || user.getNom() != null) {
-                        String displayName = (user.getPrenom() != null ? user.getPrenom() : "") + " " + 
-                                           (user.getNom() != null ? user.getNom() : "");
-                        request.setDisplayName(displayName.trim());
-                    }
-                    
-                    com.google.firebase.auth.UserRecord firebaseUser = 
-                        com.google.firebase.auth.FirebaseAuth.getInstance().createUser(request);
-                    
-                    Map<String, Object> claims = new HashMap<>();
-                    claims.put("role", user.getRole());
-                    com.google.firebase.auth.FirebaseAuth.getInstance().setCustomUserClaims(firebaseUser.getUid(), claims);
-                    
-                    user.setSyncedToFirebase(true);
-                    user.setFirebaseUid(firebaseUser.getUid());
-                    userRepository.save(user);
-                    
+                    // b) Sync vers Firebase Realtime Database (toujours pousser les données)
+                    firebaseService.syncUser(user);
                     syncedUsersCount++;
                     
                 } catch (Exception e) {
@@ -404,11 +407,25 @@ public class AdminController {
                 }
             }
             
-            response.put("usersTotal", unsyncedUsers.size());
+            // ========== 2. Synchroniser les SIGNALEMENTS vers Firebase ==========
+            Map<String, Object> sigResult = syncService.syncAllSignalementsToFirebase();
+            
+            // ========== 3. Importer les SIGNALEMENTS depuis Firebase ==========
+            Map<String, Object> importResult = syncService.syncSignalementsFromFirebase();
+            
+            response.put("usersTotal", allUsers.size());
             response.put("usersSynced", syncedUsersCount);
             response.put("usersFailed", failedUsersCount);
+            response.put("signalementsSynced", sigResult.getOrDefault("syncedCount", 0));
+            response.put("signalementsFailed", sigResult.getOrDefault("failedCount", 0));
+            response.put("signalementsImported", importResult.getOrDefault("createdCount", 0));
+            response.put("signalementsImportUpdated", importResult.getOrDefault("updatedCount", 0));
             
-            response.put("message", syncedUsersCount + " utilisateur(s) synchronisé(s) avec succès");
+            int sigSynced = (int) sigResult.getOrDefault("syncedCount", 0);
+            int sigImported = (int) importResult.getOrDefault("createdCount", 0);
+            response.put("message", syncedUsersCount + " utilisateur(s) synchronisé(s), " 
+                + sigSynced + " signalement(s) exporté(s) vers Firebase, " 
+                + sigImported + " signalement(s) importé(s) depuis Firebase");
             if (!errors.isEmpty()) {
                 response.put("errors", errors);
             }

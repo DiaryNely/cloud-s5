@@ -58,6 +58,7 @@ public class FirebaseService {
             data.put("dateEnCours", signalement.getDateEnCours() != null ? signalement.getDateEnCours().toString() : null);
             data.put("dateTermine", signalement.getDateTermine() != null ? signalement.getDateTermine().toString() : null);
             data.put("photoUrl", signalement.getPhotoUrl());
+            data.put("niveau", signalement.getNiveau());
 
             // Envoyer à Firebase de manière asynchrone
             signalementRef.setValueAsync(data);
@@ -167,21 +168,55 @@ public class FirebaseService {
                         // Récupérer tous les champs
                         if (child.child("id").exists()) {
                             Object idValue = child.child("id").getValue();
-                            signalement.put("id", idValue instanceof Long ? (Long) idValue : 
-                                                  idValue instanceof Integer ? ((Integer) idValue).longValue() : null);
+                            if (idValue instanceof Long) {
+                                signalement.put("id", (Long) idValue);
+                            } else if (idValue instanceof Integer) {
+                                signalement.put("id", ((Integer) idValue).longValue());
+                            } else if (idValue instanceof String) {
+                                // L'id Firebase peut être un push key string
+                                signalement.put("idString", (String) idValue);
+                            }
                         }
                         signalement.put("title", child.child("title").getValue(String.class));
                         signalement.put("description", child.child("description").getValue(String.class));
                         signalement.put("latitude", child.child("latitude").getValue(Double.class));
                         signalement.put("longitude", child.child("longitude").getValue(Double.class));
                         signalement.put("status", child.child("status").getValue(String.class));
-                        signalement.put("surfaceM2", child.child("surfaceM2").getValue(Double.class));
-                        signalement.put("budgetAr", child.child("budgetAr").getValue(Double.class));
+                        // surfaceM2 et budgetAr peuvent être String ou Double dans Firebase
+                        Object surfaceVal = child.child("surfaceM2").getValue();
+                        if (surfaceVal instanceof String) {
+                            try { signalement.put("surfaceM2", Double.parseDouble((String) surfaceVal)); } catch (Exception ex) { signalement.put("surfaceM2", null); }
+                        } else if (surfaceVal instanceof Number) {
+                            signalement.put("surfaceM2", ((Number) surfaceVal).doubleValue());
+                        }
+                        Object budgetVal = child.child("budgetAr").getValue();
+                        if (budgetVal instanceof String) {
+                            try { signalement.put("budgetAr", Double.parseDouble((String) budgetVal)); } catch (Exception ex) { signalement.put("budgetAr", null); }
+                        } else if (budgetVal instanceof Number) {
+                            signalement.put("budgetAr", ((Number) budgetVal).doubleValue());
+                        }
                         signalement.put("entreprise", child.child("entreprise").getValue(String.class));
                         signalement.put("userUid", child.child("userUid").getValue(String.class));
                         signalement.put("userEmail", child.child("userEmail").getValue(String.class));
                         signalement.put("createdAt", child.child("createdAt").getValue(String.class));
                         signalement.put("updatedAt", child.child("updatedAt").getValue(String.class));
+                        signalement.put("dateNouveau", child.child("dateNouveau").getValue(String.class));
+                        signalement.put("dateEnCours", child.child("dateEnCours").getValue(String.class));
+                        signalement.put("dateTermine", child.child("dateTermine").getValue(String.class));
+                        
+                        // Récupérer les photos (tableau d'objets avec pixelData base64)
+                        if (child.child("photos").exists()) {
+                            List<Map<String, Object>> photos = new ArrayList<>();
+                            for (DataSnapshot photoSnapshot : child.child("photos").getChildren()) {
+                                Map<String, Object> photo = new HashMap<>();
+                                photo.put("pixelData", photoSnapshot.child("pixelData").getValue(String.class));
+                                photo.put("mimeType", photoSnapshot.child("mimeType").getValue(String.class));
+                                photo.put("width", photoSnapshot.child("width").getValue(Long.class));
+                                photo.put("height", photoSnapshot.child("height").getValue(Long.class));
+                                photos.add(photo);
+                            }
+                            signalement.put("photos", photos);
+                        }
                         
                         data.add(signalement);
                     }

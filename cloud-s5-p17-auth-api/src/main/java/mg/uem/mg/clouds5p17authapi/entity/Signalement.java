@@ -65,6 +65,9 @@ public class Signalement {
     @Column(name = "photo_url", length = 500)
     private String photoUrl;
 
+    @Column(name = "niveau")
+    private Integer niveau = 1;
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
@@ -226,5 +229,13 @@ public class Signalement {
 
     public void setPhotoUrl(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public Integer getNiveau() {
+        return niveau;
+    }
+
+    public void setNiveau(Integer niveau) {
+        this.niveau = niveau;
     }
 }

@@ -145,7 +145,7 @@ public class SignalementController {
             // Mettre à jour le signalement avec l'URL de la photo
             String photoUrl = "/uploads/signalements/" + filename;
             SignalementUpdateRequest updateRequest = new SignalementUpdateRequest(
-                    null, null, null, null, null, null, null, null, null, photoUrl
+                    null, null, null, null, null, null, null, null, null, photoUrl, null
             );
             Optional<Signalement> updated = service.update(id, updateRequest);
 
@@ -181,7 +181,8 @@ public class SignalementController {
                 entity.getDateNouveau(),
                 entity.getDateEnCours(),
                 entity.getDateTermine(),
-                entity.getPhotoUrl()
+                entity.getPhotoUrl(),
+                entity.getNiveau()
         );
     }
 

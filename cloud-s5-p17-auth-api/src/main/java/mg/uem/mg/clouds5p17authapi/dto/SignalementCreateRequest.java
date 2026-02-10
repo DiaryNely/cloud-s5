@@ -7,6 +7,7 @@ public record SignalementCreateRequest(
         Double longitude,
         Double surfaceM2,
         Double budgetAr,
-        String entreprise
+        String entreprise,
+        Integer niveau
 ) {
 }

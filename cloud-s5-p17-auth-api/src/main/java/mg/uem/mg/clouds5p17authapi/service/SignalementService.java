@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 
 import mg.uem.mg.clouds5p17authapi.dto.SignalementCreateRequest;
 import mg.uem.mg.clouds5p17authapi.dto.SignalementUpdateRequest;
+import mg.uem.mg.clouds5p17authapi.entity.PrixForfaitaire;
 import mg.uem.mg.clouds5p17authapi.entity.Signalement;
+import mg.uem.mg.clouds5p17authapi.repository.PrixForfaitaireRepository;
 import mg.uem.mg.clouds5p17authapi.repository.SignalementRepository;
 
 @Service
@@ -18,10 +20,12 @@ public class SignalementService {
     private static final Logger log = LoggerFactory.getLogger(SignalementService.class);
 
     private final SignalementRepository repository;
+    private final PrixForfaitaireRepository prixForfaitaireRepository;
     private final FirebaseService firebaseService;
 
-    public SignalementService(SignalementRepository repository, FirebaseService firebaseService) {
+    public SignalementService(SignalementRepository repository, PrixForfaitaireRepository prixForfaitaireRepository, FirebaseService firebaseService) {
         this.repository = repository;
+        this.prixForfaitaireRepository = prixForfaitaireRepository;
         this.firebaseService = firebaseService;
     }
 
@@ -40,7 +44,16 @@ public class SignalementService {
         entity.setLatitude(request.latitude());
         entity.setLongitude(request.longitude());
         entity.setSurfaceM2(request.surfaceM2());
-        entity.setBudgetAr(request.budgetAr());
+        // Niveau de réparation (1-10), par défaut 1
+        int niveau = (request.niveau() != null && request.niveau() >= 1 && request.niveau() <= 10) ? request.niveau() : 1;
+        entity.setNiveau(niveau);
+        // Calcul automatique du budget = surface * prixM2 * niveau
+        if (request.surfaceM2() != null) {
+            List<PrixForfaitaire> prixList = prixForfaitaireRepository.findAll();
+            if (!prixList.isEmpty()) {
+                entity.setBudgetAr(request.surfaceM2() * prixList.get(0).getPrixM2() * niveau);
+            }
+        }
         entity.setEntreprise(request.entreprise());
         entity.setStatus("NOUVEAU");
         entity.setUserUid(userUid);
@@ -94,6 +107,27 @@ public class SignalementService {
             }
             if (request.photoUrl() != null) {
                 signalement.setPhotoUrl(request.photoUrl());
+            }
+            // Gestion du niveau et recalcul du budget
+            boolean niveauChanged = false;
+            boolean surfaceChanged = false;
+            if (request.niveau() != null && request.niveau() >= 1 && request.niveau() <= 10) {
+                signalement.setNiveau(request.niveau());
+                niveauChanged = true;
+            }
+            if (request.surfaceM2() != null) {
+                surfaceChanged = true;
+            }
+            // Recalcul automatique du budget si niveau ou surface changé
+            if (niveauChanged || surfaceChanged) {
+                Double surface = signalement.getSurfaceM2();
+                Integer niv = signalement.getNiveau() != null ? signalement.getNiveau() : 1;
+                if (surface != null) {
+                    List<PrixForfaitaire> prixList = prixForfaitaireRepository.findAll();
+                    if (!prixList.isEmpty()) {
+                        signalement.setBudgetAr(surface * prixList.get(0).getPrixM2() * niv);
+                    }
+                }
             }
             Signalement saved = repository.save(signalement);
             

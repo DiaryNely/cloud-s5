@@ -37,6 +37,7 @@ export default function Dashboard() {
         surface: item.surfaceM2,
         budget: item.budgetAr,
         company: item.entreprise,
+        niveau: item.niveau,
         userEmail: item.userEmail,
         dateNouveau: item.dateNouveau,
         dateEnCours: item.dateEnCours,

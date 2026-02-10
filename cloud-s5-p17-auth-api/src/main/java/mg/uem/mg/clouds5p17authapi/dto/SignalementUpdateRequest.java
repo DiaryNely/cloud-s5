@@ -12,6 +12,7 @@ public record SignalementUpdateRequest(
         Instant dateNouveau,
         Instant dateEnCours,
         Instant dateTermine,
-        String photoUrl
+        String photoUrl,
+        Integer niveau
 ) {
 }

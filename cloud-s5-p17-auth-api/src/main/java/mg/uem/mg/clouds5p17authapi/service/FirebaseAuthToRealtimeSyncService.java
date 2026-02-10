@@ -15,7 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Synchronise tous les utilisateurs de Firebase Authentication vers Realtime Database
+ * Synchronise tous les utilisateurs de Firebase Authentication vers Realtime Database.
+ * Désactivé en mode local (auth.mode=local).
  */
 @Component
 public class FirebaseAuthToRealtimeSyncService implements CommandLineRunner {
@@ -23,8 +24,19 @@ public class FirebaseAuthToRealtimeSyncService implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(FirebaseAuthToRealtimeSyncService.class);
     private static final String DATABASE_URL = "https://clouds5-p17-antananarivo-default-rtdb.firebaseio.com";
 
+    private final String authMode;
+
+    public FirebaseAuthToRealtimeSyncService(
+            @org.springframework.beans.factory.annotation.Value("${auth.mode:auto}") String authMode) {
+        this.authMode = authMode;
+    }
+
     @Override
     public void run(String... args) {
+        if ("local".equalsIgnoreCase(authMode)) {
+            log.info("Mode LOCAL — sync Firebase Auth → Realtime DB ignorée");
+            return;
+        }
         try {
             log.info("🔄 Synchronisation des users de Firebase Authentication → Realtime Database...");
             

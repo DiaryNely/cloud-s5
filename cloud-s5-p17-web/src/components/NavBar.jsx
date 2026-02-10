@@ -9,15 +9,6 @@ export default function NavBar() {
     <header className="nav">
       <div className="nav-inner">
         <Link to="/" className="nav-brand">🗺️ Cloud S5</Link>
-        <div className="nav-links">
-          <Link to="/">Carte</Link>
-          {role && (
-            <>
-              <Link to="/dashboard">Dashboard</Link>
-              {role === "MANAGER" && <Link to="/admin">Administration</Link>}
-            </>
-          )}
-        </div>
         <div className="nav-user">
           {role ? (
             <>
@@ -25,9 +16,7 @@ export default function NavBar() {
               <button className="secondary" onClick={logout}>Déconnexion</button>
             </>
           ) : (
-            <>
-              <Link to="/login">Connexion</Link>
-            </>
+            <Link to="/login" className="btn-login">Connexion</Link>
           )}
         </div>
       </div>
