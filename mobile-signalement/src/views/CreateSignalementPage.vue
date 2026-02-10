@@ -252,8 +252,8 @@ const initMap = async () => {
   await nextTick();
   map = L.map(mapContainer.value).setView([-18.9137, 47.5267], 13);
 
-  L.tileLayer('http://localhost:8081/styles/basic-preview/{z}/{x}/{y}.png', {
-    attribution: '© TileServer GL'
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
   }).addTo(map);
 
   map.on('click', (e) => {
