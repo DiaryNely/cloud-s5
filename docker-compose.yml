@@ -1,6 +1,9 @@
 version: '3.8'
 
 services:
+  # ========================================
+  # PostgreSQL Database
+  # ========================================
   postgres:
     image: postgres:15-alpine
     container_name: cloud-s5-postgres
@@ -20,6 +23,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # ========================================
+  # Backend API (Spring Boot + Maven)
+  # ========================================
   backend:
     build:
       context: ./cloud-s5-p17-auth-api
@@ -31,11 +37,40 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloud_s5
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      AUTH_MODE: local
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8083/api/auth/status || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
+  # ========================================
+  # Web Frontend (React + Vite + Nginx)
+  # ========================================
+  web:
+    build:
+      context: ./cloud-s5-p17-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8083
+        VITE_TILE_URL: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+    container_name: cloud-s5-web
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ========================================
+  # Tile Server (carte hors-ligne)
+  # ========================================
   tileserver:
     image: maptiler/tileserver-gl:latest
     container_name: cloud-s5-tileserver

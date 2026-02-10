@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.gitignore
+*.md
+.env.local
+.env.*.local
+android
+tests
+cypress.config.ts
+Dockerfile.android
+build-android-docker.ps1
