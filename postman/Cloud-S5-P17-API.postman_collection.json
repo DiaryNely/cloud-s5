@@ -1,0 +1,658 @@
+{
+	"info": {
+		"_postman_id": "cloud-s5-p17-api-collection",
+		"name": "Cloud S5 P17 - API Complète",
+		"description": "Collection Postman pour l'application Cloud S5 P17 - Système de signalement routier.\n\nContient les endpoints pour :\n- Authentification (register, login, etc.)\n- Signalements (CRUD + photo upload)\n- Prix Forfaitaire (CRUD)\n- Administration (gestion utilisateurs, synchronisation Firebase)\n\nBase URL: http://localhost:8083",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8083",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "uid",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"description": "API d'authentification hybride (Firebase online / PostgreSQL offline)",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"    pm.collectionVariables.set('uid', jsonData.uid);",
+									"    pm.test('Registration successful', function () {",
+									"        pm.expect(jsonData).to.have.property('uid');",
+									"        pm.expect(jsonData).to.have.property('token');",
+									"        pm.expect(jsonData).to.have.property('email');",
+									"        pm.expect(jsonData).to.have.property('role');",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\",\n    \"nom\": \"Dupont\",\n    \"prenom\": \"Jean\",\n    \"role\": \"UTILISATEUR\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Inscription d'un nouvel utilisateur. Utilise Firebase si en ligne, PostgreSQL si hors ligne."
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"    pm.collectionVariables.set('uid', jsonData.uid);",
+									"    pm.test('Login successful', function () {",
+									"        pm.expect(jsonData).to.have.property('uid');",
+									"        pm.expect(jsonData).to.have.property('token');",
+									"        pm.expect(jsonData).to.have.property('email');",
+									"        pm.expect(jsonData).to.have.property('role');",
+									"        pm.expect(jsonData).to.have.property('provider');",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Connexion utilisateur. Retourne un JWT. Limite de 3 tentatives, compte bloqué 5 min après dépassement."
+					}
+				},
+				{
+					"name": "Update User (Auth)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"NouveauNom\",\n    \"prenom\": \"NouveauPrenom\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/users/{{uid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "users", "{{uid}}"]
+						},
+						"description": "Modifier le nom et prénom d'un utilisateur. Requiert le rôle UTILISATEUR ou MANAGER."
+					}
+				},
+				{
+					"name": "Reset Block",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-block/{{uid}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "reset-block", "{{uid}}"]
+						},
+						"description": "Réinitialise le compteur de tentatives et débloque le compte. Requiert le rôle MANAGER."
+					}
+				},
+				{
+					"name": "Auth Status",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "status"]
+						},
+						"description": "Retourne le mode actuel (online/offline) et le provider utilisé. Endpoint public."
+					}
+				},
+				{
+					"name": "Sync Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/sync/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "sync", "status"]
+						},
+						"description": "Retourne le nombre d'utilisateurs synchronisés et en attente. Requiert le rôle MANAGER."
+					}
+				},
+				{
+					"name": "Force Sync",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/sync/force",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "sync", "force"]
+						},
+						"description": "Force la synchronisation de tous les utilisateurs locaux vers Firebase. Requiert le rôle MANAGER."
+					}
+				},
+				{
+					"name": "Get Firebase Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/firebase-token",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "firebase-token"]
+						},
+						"description": "Génère un Firebase Custom Token pour l'utilisateur authentifié."
+					}
+				},
+				{
+					"name": "[DEBUG] Login Attempts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/debug/attempts",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "debug", "attempts"]
+						},
+						"description": "Endpoint de debug pour voir l'état des tentatives de connexion. Requiert le rôle MANAGER."
+					}
+				}
+			]
+		},
+		{
+			"name": "📍 Signalements",
+			"description": "API de signalement des problèmes routiers",
+			"item": [
+				{
+					"name": "List All Signalements",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/signalements",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "signalements"]
+						},
+						"description": "Retourne tous les signalements. Endpoint public."
+					}
+				},
+				{
+					"name": "List My Signalements",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/signalements?mine=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "signalements"],
+							"query": [
+								{
+									"key": "mine",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Retourne uniquement les signalements de l'utilisateur connecté. Requiert authentification."
+					}
+				},
+				{
+					"name": "Signalements Summary",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/signalements/summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "signalements", "summary"]
+						},
+						"description": "Retourne un résumé global : total signalements, surface totale, budget total, avancement."
+					}
+				},
+				{
+					"name": "Create Signalement",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('signalementId', jsonData.id);",
+									"    pm.test('Signalement created', function () {",
+									"        pm.expect(jsonData).to.have.property('id');",
+									"        pm.expect(jsonData).to.have.property('title');",
+									"        pm.expect(jsonData).to.have.property('latitude');",
+									"        pm.expect(jsonData).to.have.property('longitude');",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Nid de poule dangereux\",\n    \"description\": \"Grand nid de poule sur la route nationale 7, côté droit\",\n    \"latitude\": -18.9137,\n    \"longitude\": 47.5361,\n    \"niveau\": \"URGENT\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/signalements",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "signalements"]
+						},
+						"description": "Créer un nouveau signalement. Requiert le rôle UTILISATEUR ou MANAGER."
+					}
+				},
+				{
+					"name": "Update Signalement",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"EN_COURS\",\n    \"surfaceM2\": 15.5,\n    \"budgetAr\": 250000,\n    \"entreprise\": \"Travaux & Co\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/signalements/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "signalements", "1"]
+						},
+						"description": "Modifier les champs d'un signalement existant (statut, surface, budget, entreprise, etc.)."
+					}
+				},
+				{
+					"name": "Upload Photo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "photo",
+									"type": "file",
+									"src": "",
+									"description": "Fichier image (jpg, png, etc.)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/signalements/1/photo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "signalements", "1", "photo"]
+						},
+						"description": "Uploader une photo pour un signalement existant. Envoyer en multipart/form-data avec le champ 'photo'."
+					}
+				}
+			]
+		},
+		{
+			"name": "💰 Prix Forfaitaire",
+			"description": "Gestion des prix au m² pour les réparations routières",
+			"item": [
+				{
+					"name": "List Prix Forfaitaires",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/prix-forfaitaire",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "prix-forfaitaire"]
+						},
+						"description": "Retourne la liste de tous les prix forfaitaires."
+					}
+				},
+				{
+					"name": "Get Prix Forfaitaire by ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/prix-forfaitaire/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "prix-forfaitaire", "1"]
+						},
+						"description": "Obtenir un prix forfaitaire par son ID."
+					}
+				},
+				{
+					"name": "Create Prix Forfaitaire",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"label\": \"Béton armé\",\n    \"description\": \"Prix au m² pour réparation en béton armé\",\n    \"prixM2\": 45000.0\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/prix-forfaitaire",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "prix-forfaitaire"]
+						},
+						"description": "Créer un nouveau prix forfaitaire. Requiert le rôle MANAGER."
+					}
+				},
+				{
+					"name": "Update Prix Forfaitaire",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"label\": \"Béton armé premium\",\n    \"description\": \"Prix au m² pour réparation en béton armé (mise à jour)\",\n    \"prixM2\": 50000.0\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/prix-forfaitaire/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "prix-forfaitaire", "1"]
+						},
+						"description": "Modifier un prix forfaitaire existant. Requiert le rôle MANAGER."
+					}
+				},
+				{
+					"name": "Delete Prix Forfaitaire",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/prix-forfaitaire/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "prix-forfaitaire", "1"]
+						},
+						"description": "Supprimer un prix forfaitaire. Requiert le rôle MANAGER."
+					}
+				}
+			]
+		},
+		{
+			"name": "👑 Administration",
+			"description": "Endpoints réservés au manager - Gestion des utilisateurs et synchronisation Firebase",
+			"item": [
+				{
+					"name": "Users",
+					"description": "Gestion des utilisateurs",
+					"item": [
+						{
+							"name": "List All Users",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "users"]
+								},
+								"description": "Lister tous les utilisateurs (Firebase + PostgreSQL). Requiert le rôle MANAGER."
+							}
+						},
+						{
+							"name": "List Blocked Users",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users?blocked=true",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "users"],
+									"query": [
+										{
+											"key": "blocked",
+											"value": "true"
+										}
+									]
+								},
+								"description": "Filtrer uniquement les comptes bloqués."
+							}
+						},
+						{
+							"name": "Create User (Admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"nouveau@example.com\",\n    \"password\": \"MotDePasse123!\",\n    \"nom\": \"Martin\",\n    \"prenom\": \"Pierre\",\n    \"role\": \"UTILISATEUR\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "users"]
+								},
+								"description": "Créer un nouveau compte utilisateur (réservé au manager)."
+							}
+						},
+						{
+							"name": "Update User (Admin)",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"nom\": \"Martin\",\n    \"prenom\": \"Pierre\",\n    \"numEtu\": \"ETU12345\",\n    \"role\": \"MANAGER\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users/{{uid}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "users", "{{uid}}"]
+								},
+								"description": "Modifier les informations d'un utilisateur (nom, prénom, numEtu, rôle)."
+							}
+						},
+						{
+							"name": "Delete User",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users/{{uid}}",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "users", "{{uid}}"]
+								},
+								"description": "Supprime un utilisateur de PostgreSQL, Firebase Auth et Firebase Realtime DB."
+							}
+						},
+						{
+							"name": "Block User",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users/{{uid}}/block",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "users", "{{uid}}", "block"]
+								},
+								"description": "Bloquer un utilisateur (local et Firebase si possible)."
+							}
+						},
+						{
+							"name": "Unblock User",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users/{{uid}}/unblock",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "users", "{{uid}}", "unblock"]
+								},
+								"description": "Débloquer un utilisateur (local et Firebase si possible)."
+							}
+						}
+					]
+				},
+				{
+					"name": "Synchronisation",
+					"description": "Synchronisation Firebase <-> PostgreSQL",
+					"item": [
+						{
+							"name": "Sync All to Firebase",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/sync-to-firebase",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "sync-to-firebase"]
+								},
+								"description": "Synchronise tous les utilisateurs et signalements locaux vers Firebase (Auth + Realtime DB)."
+							}
+						},
+						{
+							"name": "Sync Signalements to Firebase",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/sync-signalements",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "sync-signalements"]
+								},
+								"description": "Synchronise les signalements non synchronisés de PostgreSQL vers Firebase."
+							}
+						},
+						{
+							"name": "Sync from Firebase",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/sync-from-firebase",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "sync-from-firebase"]
+								},
+								"description": "Récupère les signalements de Firebase et les importe en local (PostgreSQL)."
+							}
+						},
+						{
+							"name": "Signalements Sync Status",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/signalements/sync-status",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "admin", "signalements", "sync-status"]
+								},
+								"description": "Retourne le nombre de signalements synchronisés et non synchronisés."
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}
