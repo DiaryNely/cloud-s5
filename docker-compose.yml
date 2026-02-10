@@ -20,6 +20,22 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./cloud-s5-p17-auth-api
+      dockerfile: Dockerfile
+    container_name: cloud-s5-backend
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloud_s5
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   tileserver:
     image: maptiler/tileserver-gl:latest
     container_name: cloud-s5-tileserver
