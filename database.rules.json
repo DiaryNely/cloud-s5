@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "signalements": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth.uid == $uid"
+      }
+    }
+  }
+}
