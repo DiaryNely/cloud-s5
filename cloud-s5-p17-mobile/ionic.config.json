@@ -1,7 +1,0 @@
-{
-  "name": "cloud-s5-p17-mobile",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "vue-vite"
-}
