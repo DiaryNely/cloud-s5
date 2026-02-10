@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict tXFIbJiHFrwyNzBkKEyDzK8uSlWV1FOX12u4gmo79O8zjddiIZEI7qxQ6uNubSz
+\restrict IyiYaHPYYXyfyPcNZBfLITXf8r5jEaEJDvF2rolR75bYsEGODqEC03BL04ahOeK
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -19,7 +19,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
@@ -32,14 +32,45 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_updated_at_column() OWNER TO postgres;
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: roles; Type: TABLE; Schema: public; Owner: postgres
+-- Name: prix_forfaitaire; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.prix_forfaitaire (
+    id bigint NOT NULL,
+    label character varying(150) NOT NULL,
+    description text,
+    prix_m2 double precision NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: prix_forfaitaire_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.prix_forfaitaire_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: prix_forfaitaire_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.prix_forfaitaire_id_seq OWNED BY public.prix_forfaitaire.id;
+
+
+--
+-- Name: roles; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.roles (
@@ -49,10 +80,8 @@ CREATE TABLE public.roles (
 );
 
 
-ALTER TABLE public.roles OWNER TO postgres;
-
 --
--- Name: roles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: roles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.roles_id_seq
@@ -64,17 +93,15 @@ CREATE SEQUENCE public.roles_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.roles_id_seq OWNER TO postgres;
-
 --
--- Name: roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.roles_id_seq OWNED BY public.roles.id;
 
 
 --
--- Name: sessions; Type: TABLE; Schema: public; Owner: postgres
+-- Name: sessions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.sessions (
@@ -89,10 +116,8 @@ CREATE TABLE public.sessions (
 );
 
 
-ALTER TABLE public.sessions OWNER TO postgres;
-
 --
--- Name: sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.sessions_id_seq
@@ -104,17 +129,15 @@ CREATE SEQUENCE public.sessions_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.sessions_id_seq OWNER TO postgres;
-
 --
--- Name: sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.sessions_id_seq OWNED BY public.sessions.id;
 
 
 --
--- Name: signalements; Type: TABLE; Schema: public; Owner: postgres
+-- Name: signalements; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.signalements (
@@ -136,14 +159,14 @@ CREATE TABLE public.signalements (
     date_nouveau timestamp without time zone,
     date_en_cours timestamp without time zone,
     date_termine timestamp without time zone,
-    photo_url character varying(500)
+    photo_url character varying(500),
+    niveau integer DEFAULT 1,
+    CONSTRAINT check_niveau CHECK (((niveau >= 1) AND (niveau <= 10)))
 );
 
 
-ALTER TABLE public.signalements OWNER TO postgres;
-
 --
--- Name: signalements_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: signalements_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.signalements_id_seq
@@ -154,17 +177,15 @@ CREATE SEQUENCE public.signalements_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.signalements_id_seq OWNER TO postgres;
-
 --
--- Name: signalements_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: signalements_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.signalements_id_seq OWNED BY public.signalements.id;
 
 
 --
--- Name: sync_queue; Type: TABLE; Schema: public; Owner: postgres
+-- Name: sync_queue; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.sync_queue (
@@ -179,10 +200,8 @@ CREATE TABLE public.sync_queue (
 );
 
 
-ALTER TABLE public.sync_queue OWNER TO postgres;
-
 --
--- Name: sync_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: sync_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.sync_queue_id_seq
@@ -194,17 +213,15 @@ CREATE SEQUENCE public.sync_queue_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.sync_queue_id_seq OWNER TO postgres;
-
 --
--- Name: sync_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: sync_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.sync_queue_id_seq OWNED BY public.sync_queue.id;
 
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: postgres
+-- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.users (
@@ -225,10 +242,8 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO postgres;
-
 --
--- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.users_id_seq
@@ -239,63 +254,77 @@ CREATE SEQUENCE public.users_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.users_id_seq OWNER TO postgres;
-
 --
--- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: roles id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: prix_forfaitaire id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.prix_forfaitaire ALTER COLUMN id SET DEFAULT nextval('public.prix_forfaitaire_id_seq'::regclass);
+
+
+--
+-- Name: roles id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.roles ALTER COLUMN id SET DEFAULT nextval('public.roles_id_seq'::regclass);
 
 
 --
--- Name: sessions id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions ALTER COLUMN id SET DEFAULT nextval('public.sessions_id_seq'::regclass);
 
 
 --
--- Name: signalements id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: signalements id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.signalements ALTER COLUMN id SET DEFAULT nextval('public.signalements_id_seq'::regclass);
 
 
 --
--- Name: sync_queue id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: sync_queue id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sync_queue ALTER COLUMN id SET DEFAULT nextval('public.sync_queue_id_seq'::regclass);
 
 
 --
--- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
 
 
 --
--- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: prix_forfaitaire; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.prix_forfaitaire (id, label, description, prix_m2, created_at, updated_at) FROM stdin;
+2	test	\N	10000	2026-02-10 09:40:22.439267+00	2026-02-10 09:40:22.439267+00
+\.
+
+
+--
+-- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.roles (id, libelle, description) FROM stdin;
 1	VISITEUR	Peut seulement voir la carte
 2	UTILISATEUR	Peut signaler des incidents
-3	MANAGER	Peut gérer les signalements et utilisateurs
+3	MANAGER	Peut g├®rer les signalements et utilisateurs
 \.
 
 
 --
--- Data for Name: sessions; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: sessions; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.sessions (id, user_id, token_hash, created_at, expires_at, revoked, device_info, ip_address) FROM stdin;
@@ -303,22 +332,15 @@ COPY public.sessions (id, user_id, token_hash, created_at, expires_at, revoked, 
 
 
 --
--- Data for Name: signalements; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: signalements; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.signalements (id, title, description, latitude, longitude, status, surface_m2, budget_ar, entreprise, user_uid, user_email, synced_to_firebase, firebase_id, created_at, updated_at, date_nouveau, date_en_cours, date_termine, photo_url) FROM stdin;
-4	ity	ity test	-18.986012162114992	47.53247666797211	NOUVEAU	30	4300098	magica	QsiJb1T7gaUbVJA79X9HarfOkgM2	dimbyrajoelijao@gmail.com	t	4	2026-01-27 07:08:59.513158	2026-02-03 08:37:03.391687	2026-01-27 07:08:59.513158	\N	\N	\N
-5	test	testststs	-18.919310485418624	47.539582881958594	NOUVEAU	10	500000	ranto adala	QsiJb1T7gaUbVJA79X9HarfOkgM2	dimbyrajoelijao@gmail.com	t	5	2026-01-27 07:08:59.550959	2026-02-03 08:37:03.391687	2026-01-27 07:08:59.550959	\N	\N	\N
-6	Nid de lpb	misy rano satria misy lavaka 	-18.985997335642143	47.53246304073257	NOUVEAU	123	49999996	LPB	YPFdwqfnZcMj02OBQpjWqRlw16u2	kantoandriamanakasina@gmail.com	t	6	2026-01-27 07:40:20.580398	2026-02-03 08:37:03.391687	2026-01-27 07:40:20.580398	\N	\N	\N
-2	nid de poule	test	-18.886024924428828	47.52194297948091	NOUVEAU	20	300000	tsy magic	QsiJb1T7gaUbVJA79X9HarfOkgM2	dimbyrajoelijao@gmail.com	t	2	2026-01-27 06:07:15.112461	2026-02-03 12:31:57.659825	2026-01-27 06:07:15.112461	\N	\N	/uploads/signalements/sig_2_9d9d8c8d-4af0-4b2c-a732-7e18455b5426.png
-1	nid de poule	ratsy	-18.818299628565303	47.52000234377398	TERMINE	20	200000	magic	xdc53w0Npidkj4HSUrNeuJCsGoW2	mota@gmail.com	t	1	2026-01-27 06:07:15.091022	2026-02-03 12:37:04.08764	2026-01-27 06:07:15.091022	2026-02-03 00:00:00	2026-02-21 00:00:00	/uploads/signalements/sig_1_779cb79b-5b93-458c-9742-99e5951146c8.png
-3	nid	test	-18.90860681903941	47.53327914493254	EN_COURS	30	240000	magic	QsiJb1T7gaUbVJA79X9HarfOkgM2	dimbyrajoelijao@gmail.com	t	3	2026-01-27 06:07:15.123061	2026-02-03 12:48:06.466006	2026-01-27 06:07:15.123061	2026-02-03 00:00:00	\N	/uploads/signalements/sig_3_997c399a-48c4-4d7f-bc67-30148ac65a0d.jpg
-7	nid de cyclone	cyclone tropicale	-18.98600085840515	47.53246822550446	NOUVEAU	62	20000	kantooo	YPFdwqfnZcMj02OBQpjWqRlw16u2	kantoandriamanakasina@gmail.com	t	7	2026-02-10 06:08:27.168089	2026-02-10 09:08:27.265291	\N	\N	\N	/uploads/signalements/sig_7_d2c6bbd7-7238-4349-a533-50101a1045af.jpg
+COPY public.signalements (id, title, description, latitude, longitude, status, surface_m2, budget_ar, entreprise, user_uid, user_email, synced_to_firebase, firebase_id, created_at, updated_at, date_nouveau, date_en_cours, date_termine, photo_url, niveau) FROM stdin;
 \.
 
 
 --
--- Data for Name: sync_queue; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: sync_queue; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.sync_queue (id, user_id, action, payload, status, attempts, last_attempt, created_at) FROM stdin;
@@ -326,64 +348,68 @@ COPY public.sync_queue (id, user_id, action, payload, status, attempts, last_att
 
 
 --
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.users (id, uid, email, password_hash, nom, prenom, num_etu, role, synced_to_firebase, firebase_uid, login_attempts, blocked_until, created_at, updated_at) FROM stdin;
-3	local-1769494031935-2	jean.rakoto@test.mg	$2a$10$AQYw7lXwLSE4oDOCLFmM5unbe75XlLexdk6/Vfr4QFh8VKgsdMJ/S	Jean	Rakoto	\N	UTILISATEUR	t	5lV3hToXgAOjs4L1U8wNRSnAQhG3	0	\N	2026-01-27 06:07:12.004572	2026-01-27 06:07:12.004572
-4	local-1769494032013-3	offlinefee.user2@test.mg	$2a$10$Nf/TunpLN6N9Up2ZrUX5MuQbm785vSdb0cIdJbvqZQZHvZguTa.w6	\N	\N	\N	USER	t	89gdJEYl46SPRJCL6v21pkJs4Ak1	0	\N	2026-01-27 06:07:12.082859	2026-01-27 06:07:12.082859
-6	local-1769494032176-5	ity@gmail.com	$2a$10$rRzZMTyQiRD41Oa2e4q4Suhc5qJf.kAWnYL/xzbawxry1Ql6eX5yq	null	null	\N	USER	t	QRT3cNsJApM5cigyCRAYOaiMCDw1	0	\N	2026-01-27 06:07:12.244183	2026-01-27 06:07:12.244183
-7	local-1769494032267-6	dimbyrajoelijao@gmail.com	$2a$10$gZdgsJGJqTI7G/91D/GTn.aRBItZlVjpKueHKhAQYBbt98Qj9GCHG	Dimby	Rajoelijao	\N	UTILISATEUR	t	QsiJb1T7gaUbVJA79X9HarfOkgM2	0	\N	2026-01-27 06:07:12.33535	2026-01-27 06:07:12.33535
-8	local-1769494032351-7	tester@example.com	$2a$10$zzqIy1vOHWKNWiME1c7JQualVbuwTSfgDlfaoqVSzf/7nFKbIk3SS	User	Test	\N	UTILISATEUR	t	SLsD2mCFuJYV1AwIzqEWJfAR7ge2	0	\N	2026-01-27 06:07:12.418854	2026-01-27 06:07:12.418854
-9	local-1769494032433-8	kantoandriamanakasina@gmail.com	$2a$10$b2APiFsf2U2ld0JhT46nl.JXA3lARTR6nOE9rnVRWDF4lM6yIdnqC	\N	\N	\N	UTILISATEUR	t	YPFdwqfnZcMj02OBQpjWqRlw16u2	0	\N	2026-01-27 06:07:12.504761	2026-01-27 06:07:12.504761
-12	local-1769494032672-11	mota@gmail.com	$2a$10$YD8SsuGJTAAMxkbHQyR17.bFe27GDLrUTt.W46sjyGFuIx0gr/Ce6	 mota	mota	\N	UTILISATEUR	t	xdc53w0Npidkj4HSUrNeuJCsGoW2	0	\N	2026-01-27 06:07:12.740249	2026-01-27 06:07:12.740249
-1	local-1769494031748-0	kanto@gmail.com	$2a$10$TDrHUZylU5IzurfgD12XauYuEnbrz5Em5lBydGKTyat7SOnUJS7.G	\N	kanto	\N	USER	t	0EgF8ZIeWcWE3kHPhJXImpXMcAN2	3	2026-01-27 06:19:42.906003	2026-01-27 06:07:11.824586	2026-01-27 09:14:42.902849
-10	local-1769494032513-9	hasiniaina.nely@gmail.com	$2a$10$rfzAwGO5RqBTdlHU5ZdkKe6AGW4U7GC2qiKzifp1iFe8TSE8t6yIe	Diary	NELY	\N	UTILISATEUR	t	fMwe8MGCfpYONd2BUoLfP3EA3As2	3	2026-01-27 06:19:57.621306	2026-01-27 06:07:12.582844	2026-01-27 09:14:57.620509
-13	local-1769504594209-0	andrana@gmail.com	$2a$10$hKwPVV4jsfR5mkWiFpkYBe6nbCMdBeVcxP/EsYxCQXsJ7FXOG4UWu	null	null	\N	USER	t	vUfxAN1MjmfL90KapcZ0GBcFemk2	0	\N	2026-01-27 09:03:14.277801	2026-01-27 09:03:14.277801
-11	local-1769494032593-10	nasa@gmail.com	$2a$10$XkT6OeHek7a/r70DcKfygekUzlHV4zLn2BxBg2Xfqqfi3epAkAi76	null	null	\N	USER	t	oetNRgzEpPUgjNgiPtFWVOGJ8Zg2	0	2126-01-10 08:37:32.429807	2026-01-27 06:07:12.662022	2026-02-03 11:37:32.472299
-2	local-1769494031857-1	online.user@test.mg	$2a$10$X6q7dZdYKjp8bMiPrPpse.zpXNRmX47jscGlRa6zPw6I1nmdn61/y	\N	Mod	\N	MANAGER	t	0etawFhHLUbJpAUoeBJ2u8Kvlc22	0	\N	2026-01-27 06:07:11.925775	2026-02-03 08:53:44.157721
-16	local-1770109224816-0	admin@cloud-s5.mg	$2a$10$ZL9upE5Zwndk/7E9oRGa7Otouo3pFcWH7pe4eQFVAqjvjyImmJQla	Admin	Super	\N	MANAGER	t	7QoOH1onhSRSV79KbLYgLgPLYU33	0	\N	2026-02-03 09:00:24.904441	2026-02-03 09:00:24.904441
-17	local-1770109225075-1	manager@cloud-s5.mg	$2a$10$2XD7Ve5322u4GKmbzz0s3uUxu2tK0M2bMLJWDPkuOqHiq12jp/FOy	Manager	Admin	\N	MANAGER	t	SVZqDXDduVWEgYDgn8yfdjkbWHR2	0	\N	2026-02-03 09:00:25.159323	2026-02-03 09:00:25.159323
+19	63f853d0-214a-4dd1-a2f1-805d23c22e12	user@cloud-s5.mg	$2a$10$24KvBdrsx7rSG8w54X9e/OTk1lqsy3nOwmK7yH/CfHldDw45Kb4uu	Utilisateur	Test	\N	UTILISATEUR	t	UhWH6X9fNuc4DtqeUGb2apa7At52	0	\N	2026-02-10 08:42:22.412712	2026-02-10 11:44:16.869778
+18	fa934712-8497-4c17-bb06-b57c66e6c2e5	manager@cloud-s5.mg	$2a$10$xgPxIUkAtH8WpNw184niQOhi.6IzH.M0ITvvppMuwgHuwDLOKGOAW	Manager	Admin	3123	MANAGER	t	SVZqDXDduVWEgYDgn8yfdjkbWHR2	0	\N	2026-02-10 08:42:03.180329	2026-02-10 12:24:23.457729
+20	b916e2b6-5da2-4a64-b755-5fded7418968	cindy@cindy.mg	$2a$10$ht68zS1zqetQklNBQwohdeajvwVaO0cbI5R7PXv0ue.3bERJOEYZ6	test	test	3123	USER	t	aDjVDMQZpMfF7KI1qrKe8mFgJl12	0	\N	2026-02-10 09:43:25.058387	2026-02-10 12:50:35.006209
 \.
 
 
 --
--- Name: roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: prix_forfaitaire_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.prix_forfaitaire_id_seq', 2, true);
+
+
+--
+-- Name: roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.roles_id_seq', 3, true);
 
 
 --
--- Name: sessions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: sessions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.sessions_id_seq', 1, false);
 
 
 --
--- Name: signalements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: signalements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.signalements_id_seq', 7, true);
+SELECT pg_catalog.setval('public.signalements_id_seq', 31, true);
 
 
 --
--- Name: sync_queue_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: sync_queue_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.sync_queue_id_seq', 1, false);
 
 
 --
--- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 17, true);
+SELECT pg_catalog.setval('public.users_id_seq', 20, true);
 
 
 --
--- Name: roles roles_libelle_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: prix_forfaitaire prix_forfaitaire_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.prix_forfaitaire
+    ADD CONSTRAINT prix_forfaitaire_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: roles roles_libelle_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.roles
@@ -391,7 +417,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.roles
@@ -399,7 +425,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
@@ -407,7 +433,7 @@ ALTER TABLE ONLY public.sessions
 
 
 --
--- Name: signalements signalements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: signalements signalements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.signalements
@@ -415,7 +441,7 @@ ALTER TABLE ONLY public.signalements
 
 
 --
--- Name: sync_queue sync_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: sync_queue sync_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sync_queue
@@ -423,7 +449,7 @@ ALTER TABLE ONLY public.sync_queue
 
 
 --
--- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -431,7 +457,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -439,7 +465,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: users users_uid_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_uid_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -447,63 +473,63 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: idx_signalements_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_signalements_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_signalements_status ON public.signalements USING btree (status);
 
 
 --
--- Name: idx_signalements_synced; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_signalements_synced; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_signalements_synced ON public.signalements USING btree (synced_to_firebase);
 
 
 --
--- Name: idx_signalements_user_uid; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_signalements_user_uid; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_signalements_user_uid ON public.signalements USING btree (user_uid);
 
 
 --
--- Name: idx_sync_queue_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_sync_queue_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_sync_queue_status ON public.sync_queue USING btree (status);
 
 
 --
--- Name: idx_users_email; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_email; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_users_email ON public.users USING btree (email);
 
 
 --
--- Name: idx_users_synced; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_synced; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_users_synced ON public.users USING btree (synced_to_firebase);
 
 
 --
--- Name: signalements update_signalements_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: signalements update_signalements_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER update_signalements_updated_at BEFORE UPDATE ON public.signalements FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
@@ -511,7 +537,7 @@ ALTER TABLE ONLY public.sessions
 
 
 --
--- Name: sync_queue sync_queue_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: sync_queue sync_queue_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sync_queue
@@ -522,5 +548,5 @@ ALTER TABLE ONLY public.sync_queue
 -- PostgreSQL database dump complete
 --
 
-\unrestrict tXFIbJiHFrwyNzBkKEyDzK8uSlWV1FOX12u4gmo79O8zjddiIZEI7qxQ6uNubSz
+\unrestrict IyiYaHPYYXyfyPcNZBfLITXf8r5jEaEJDvF2rolR75bYsEGODqEC03BL04ahOeK
 
