@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "clouds5-p17-antananarivo"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  }
+}
