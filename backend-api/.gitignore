@@ -29,11 +29,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Configuration sensible
-application-prod.yml
-firebase-credentials.json
-*.pem
-*.key
 
 # Docker
 .docker/

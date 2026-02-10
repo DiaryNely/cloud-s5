@@ -250,8 +250,8 @@ const initMap = () => {
   
   map = L.map('user-map').setView([-18.8792, 47.5079], 12);
   
-  L.tileLayer('http://localhost:8081/styles/basic-preview/{z}/{x}/{y}.png', {
-    attribution: '© TileServer GL'
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
   }).addTo(map);
   
   updateMap();
