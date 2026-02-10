@@ -13,7 +13,8 @@ import java.util.Map;
 
 /**
  * Synchronise automatiquement les signalements depuis Firebase vers PostgreSQL au démarrage
- * ET synchronise les signalements locaux non synchronisés vers Firebase
+ * ET synchronise les signalements locaux non synchronisés vers Firebase.
+ * Désactivé en mode local (auth.mode=local).
  */
 @Component
 @Order(3) // S'exécute après les autres initialisations
@@ -24,17 +25,26 @@ public class SignalementFirebaseSyncService implements CommandLineRunner {
     private final SignalementRepository signalementRepository;
     private final FirebaseService firebaseService;
     private final ConnectionDetectorService connectionDetector;
+    private final String authMode;
 
     public SignalementFirebaseSyncService(SignalementRepository signalementRepository, 
                                          FirebaseService firebaseService,
-                                         ConnectionDetectorService connectionDetector) {
+                                         ConnectionDetectorService connectionDetector,
+                                         @org.springframework.beans.factory.annotation.Value("${auth.mode:auto}") String authMode) {
         this.signalementRepository = signalementRepository;
         this.firebaseService = firebaseService;
         this.connectionDetector = connectionDetector;
+        this.authMode = authMode;
     }
 
     @Override
     public void run(String... args) {
+        // Ne pas synchroniser automatiquement en mode local
+        if ("local".equalsIgnoreCase(authMode)) {
+            log.info("Mode LOCAL — sync automatique signalements ignorée (utilisez le bouton Synchroniser)");
+            return;
+        }
+
         // Vérifier la connexion internet
         if (!connectionDetector.isOnline()) {
             log.warn("⚠️ Application en mode OFFLINE - Synchronisation Firebase ignorée");

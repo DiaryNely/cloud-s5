@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { fetchSignalements, fetchSummary } from "../api/signalements.js";
-import { fetchUsers as apiFetchUsers } from "../api/users.js";
+import { fetchUsers as apiFetchUsers, syncToFirebase as apiSyncToFirebase } from "../api/users.js";
 
 export default function AdminDashboard() {
   const { email } = useAuth();
@@ -9,6 +9,8 @@ export default function AdminDashboard() {
   const [signalements, setSignalements] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -49,16 +51,48 @@ export default function AdminDashboard() {
       }, 0) / completedWithDates.length).toFixed(1)
     : null;
 
+  const syncToFirebase = async () => {
+    if (!confirm("Synchroniser tous les utilisateurs et signalements avec Firebase ?\n(Export local → Firebase + Import Firebase → local)")) return;
+    setSyncLoading(true);
+    setSyncMessage(null);
+    try {
+      const data = await apiSyncToFirebase();
+      const usersSynced = data.usersSynced || 0;
+      const sigSynced = data.signalementsSynced || 0;
+      const sigImported = data.signalementsImported || 0;
+      let msg = `✅ ${usersSynced} utilisateur(s) synchronisé(s), ${sigSynced} signalement(s) exporté(s)`;
+      if (sigImported > 0) {
+        msg += `, ${sigImported} signalement(s) importé(s) depuis Firebase`;
+      }
+      setSyncMessage(msg);
+      await loadData();
+    } catch (err) {
+      setSyncMessage(`❌ ${err?.response?.data?.error || "Erreur lors de la synchronisation"}`);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="loading"><div className="spinner"></div></div>;
   }
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Tableau de bord</h2>
-        <p style={{ color: "var(--gray-600)" }}>Vue d'ensemble de l'application</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Tableau de bord</h2>
+          <p style={{ color: "var(--gray-600)" }}>Vue d'ensemble de l'application</p>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="secondary" onClick={loadData}>🔄 Rafraîchir</button>
+          <button className="warning" onClick={syncToFirebase} disabled={syncLoading}>
+            {syncLoading ? "⏳ Synchronisation..." : "🔄 Sync Firebase"}
+          </button>
+        </div>
       </div>
+
+      {syncMessage && <div className={`alert ${syncMessage.startsWith("✅") ? "success" : "error"}`} style={{ marginBottom: 16 }}>{syncMessage}</div>}
 
       {/* KPI Cards */}
       <div className="stats-grid" style={{ gridColumn: "1 / -1", marginBottom: 32 }}>

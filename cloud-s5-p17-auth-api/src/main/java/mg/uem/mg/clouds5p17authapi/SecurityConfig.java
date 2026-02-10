@@ -44,6 +44,11 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.PATCH, "/api/signalements/**").authenticated()
                     // Allow photo uploads for authenticated users
                     .requestMatchers(HttpMethod.POST, "/api/signalements/*/photo").authenticated()
+                    // Prix forfaitaire: lecture publique, écriture MANAGER
+                    .requestMatchers(HttpMethod.GET, "/api/prix-forfaitaire/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/prix-forfaitaire").authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/prix-forfaitaire/**").authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/prix-forfaitaire/**").authenticated()
                     // Allow public access to uploaded files
                     .requestMatchers("/uploads/**").permitAll()
                         // Allow Swagger UI

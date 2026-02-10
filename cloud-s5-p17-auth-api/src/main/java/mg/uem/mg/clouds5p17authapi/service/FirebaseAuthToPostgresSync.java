@@ -17,7 +17,8 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Importe automatiquement tous les utilisateurs de Firebase Authentication vers PostgreSQL au démarrage
+ * Importe automatiquement tous les utilisateurs de Firebase Authentication vers PostgreSQL au démarrage.
+ * Désactivé en mode local (auth.mode=local).
  */
 @Component
 @Order(1) // S'exécute en premier
@@ -28,16 +29,25 @@ public class FirebaseAuthToPostgresSync implements CommandLineRunner {
     private final UserRepository userRepository;
     private final ConnectionDetectorService connectionDetector;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final String authMode;
 
     public FirebaseAuthToPostgresSync(UserRepository userRepository, 
-                                     ConnectionDetectorService connectionDetector) {
+                                     ConnectionDetectorService connectionDetector,
+                                     @org.springframework.beans.factory.annotation.Value("${auth.mode:auto}") String authMode) {
         this.userRepository = userRepository;
         this.connectionDetector = connectionDetector;
         this.passwordEncoder = new BCryptPasswordEncoder();
+        this.authMode = authMode;
     }
 
     @Override
     public void run(String... args) {
+        // Ne pas importer depuis Firebase en mode local
+        if ("local".equalsIgnoreCase(authMode)) {
+            log.info("Mode LOCAL — import Firebase Auth → PostgreSQL ignoré");
+            return;
+        }
+
         // Vérifier la connexion internet
         if (!connectionDetector.isOnline()) {
             log.warn("⚠️ Application en mode OFFLINE - Import utilisateurs Firebase ignoré");

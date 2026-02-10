@@ -12,4 +12,5 @@ public interface SignalementRepository extends JpaRepository<Signalement, Long> 
     List<Signalement> findByUserUid(String userUid);
     List<Signalement> findBySyncedToFirebaseFalse();
     List<Signalement> findBySyncedToFirebaseTrue();
+    Signalement findByFirebaseId(String firebaseId);
 }

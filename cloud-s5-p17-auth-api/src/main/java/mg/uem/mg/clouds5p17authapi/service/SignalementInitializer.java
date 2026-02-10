@@ -8,21 +8,29 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Service pour synchroniser les signalements existants de PostgreSQL vers Firebase au démarrage
+ * Service pour synchroniser les signalements existants de PostgreSQL vers Firebase au démarrage.
+ * Désactivé en mode local (auth.mode=local).
  */
 @Service
 public class SignalementInitializer {
 
     private final SignalementRepository repository;
     private final FirebaseService firebaseService;
+    private final String authMode;
 
-    public SignalementInitializer(SignalementRepository repository, FirebaseService firebaseService) {
+    public SignalementInitializer(SignalementRepository repository, FirebaseService firebaseService,
+            @org.springframework.beans.factory.annotation.Value("${auth.mode:auto}") String authMode) {
         this.repository = repository;
         this.firebaseService = firebaseService;
+        this.authMode = authMode;
     }
 
     @PostConstruct
     public void initializeFirebase() {
+        if ("local".equalsIgnoreCase(authMode)) {
+            System.out.println("Mode LOCAL — sync signalements → Firebase ignorée");
+            return;
+        }
         try {
             // Récupérer tous les signalements de PostgreSQL
             List<Signalement> signalements = repository.findAll();

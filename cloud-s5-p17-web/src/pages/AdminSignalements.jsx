@@ -1,9 +1,18 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "../api/client.js";
 import { fetchSignalements, updateSignalement } from "../api/signalements.js";
+import { fetchPrixForfaitaire } from "../api/prixForfaitaire.js";
 
 const STATUSES = ["NOUVEAU", "EN_COURS", "TERMINE"];
 const STATUS_PERCENT = { NOUVEAU: 0, EN_COURS: 50, TERMINE: 100 };
+
+// Couleur du niveau (1=vert clair, 5=orange, 10=rouge vif)
+function niveauColor(n) {
+  if (n <= 3) return "#22c55e";
+  if (n <= 6) return "#f59e0b";
+  if (n <= 8) return "#f97316";
+  return "#ef4444";
+}
 
 export default function AdminSignalements() {
   const [signalements, setSignalements] = useState([]);
@@ -14,6 +23,7 @@ export default function AdminSignalements() {
   const [saveSuccess, setSaveSuccess] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoFile, setPhotoFile] = useState(null);
+  const [prixM2, setPrixM2] = useState(null);
 
   const loadSignalements = useCallback(async () => {
     setLoading(true);
@@ -30,8 +40,37 @@ export default function AdminSignalements() {
 
   useEffect(() => { loadSignalements(); }, [loadSignalements]);
 
+  // Charger le prix forfaitaire pour le calcul automatique du budget
+  useEffect(() => {
+    fetchPrixForfaitaire().then(list => {
+      if (list.length > 0) setPrixM2(list[0].prixM2);
+    }).catch(() => {});
+  }, []);
+
   const onEditChange = (id, field, value) => {
     setEdits(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+
+  // Quand le niveau change, recalculer le budget automatiquement
+  const onNiveauChange = (item, newNiveau) => {
+    const edit = edits[item.id] || {};
+    const surface = edit.surfaceM2 ?? item.surfaceM2;
+    const updates = { niveau: newNiveau };
+    if (surface && prixM2) {
+      updates.budgetAr = Math.round(surface * prixM2 * newNiveau);
+    }
+    setEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], ...updates } }));
+  };
+
+  // Quand la surface change, recalculer le budget avec le niveau actuel
+  const onSurfaceChange = (item, newSurface) => {
+    const edit = edits[item.id] || {};
+    const niveau = edit.niveau ?? item.niveau ?? 1;
+    const updates = { surfaceM2: newSurface };
+    if (newSurface && prixM2) {
+      updates.budgetAr = Math.round(newSurface * prixM2 * niveau);
+    }
+    setEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], ...updates } }));
   };
 
   const saveSignalement = async (signalement) => {
@@ -164,6 +203,7 @@ export default function AdminSignalements() {
                   <th>Date Terminé</th>
                   <th>Statut</th>
                   <th>%</th>
+                  <th>Niveau</th>
                   <th>Surface</th>
                   <th>Budget</th>
                   <th>Entreprise</th>
@@ -203,8 +243,38 @@ export default function AdminSignalements() {
                         </select>
                       </td>
                       <td style={{ textAlign: "center" }}>{STATUS_PERCENT[(edit.status ?? item.status)] ?? "—"}%</td>
-                      <td><input type="number" step="any" value={edit.surfaceM2 ?? item.surfaceM2 ?? ""} onChange={(e) => onEditChange(item.id, "surfaceM2", e.target.value ? Number(e.target.value) : null)} style={{ width: 100 }} /></td>
-                      <td><input type="number" step="any" value={edit.budgetAr ?? item.budgetAr ?? ""} onChange={(e) => onEditChange(item.id, "budgetAr", e.target.value ? Number(e.target.value) : null)} style={{ width: 120 }} /></td>
+                      <td>
+                        <div className="niveau-selector">
+                          {[1,2,3,4,5,6,7,8,9,10].map(n => {
+                            const current = edit.niveau ?? item.niveau ?? 1;
+                            const active = n <= current;
+                            return (
+                              <button
+                                key={n}
+                                className={`niveau-dot ${active ? "active" : ""}`}
+                                style={{ 
+                                  background: active ? niveauColor(current) : "var(--gray-200)",
+                                  color: active ? "#fff" : "var(--gray-500)"
+                                }}
+                                onClick={() => onNiveauChange(item, n)}
+                                title={`Niveau ${n}`}
+                              >
+                                {n}
+                              </button>
+                            );
+                          })}
+                          <span className="niveau-label" style={{ color: niveauColor(edit.niveau ?? item.niveau ?? 1) }}>
+                            {edit.niveau ?? item.niveau ?? 1}/10
+                          </span>
+                        </div>
+                      </td>
+                      <td><input type="number" step="any" value={edit.surfaceM2 ?? item.surfaceM2 ?? ""} onChange={(e) => onSurfaceChange(item, e.target.value ? Number(e.target.value) : null)} style={{ width: 100 }} /></td>
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}>
+                          {((edit.budgetAr ?? item.budgetAr) || 0).toLocaleString("fr-FR")} Ar
+                        </div>
+                        {prixM2 && <div style={{ fontSize: 10, color: "var(--gray-500)" }}>{prixM2.toLocaleString("fr-FR")} × {edit.niveau ?? item.niveau ?? 1} × {(edit.surfaceM2 ?? item.surfaceM2 ?? 0)}</div>}
+                      </td>
                       <td><input type="text" value={edit.entreprise ?? item.entreprise ?? ""} onChange={(e) => onEditChange(item.id, "entreprise", e.target.value)} style={{ minWidth: 150 }} placeholder="Entreprise" /></td>
                       <td>
                         <div style={{ display: "flex", gap: 8 }}>
@@ -236,6 +306,7 @@ export default function AdminSignalements() {
               <div><div style={{ fontSize: 12, color: "var(--gray-600)" }}>Titre</div><div style={{ fontWeight: 600 }}>{selectedSignalement.title}</div></div>
               <div><div style={{ fontSize: 12, color: "var(--gray-600)" }}>Statut</div><div style={{ fontWeight: 600 }}>{selectedSignalement.status} ({STATUS_PERCENT[selectedSignalement.status] ?? "—"}%)</div></div>
               <div><div style={{ fontSize: 12, color: "var(--gray-600)" }}>Signalé par</div><div>{selectedSignalement.userEmail}</div></div>
+              <div><div style={{ fontSize: 12, color: "var(--gray-600)" }}>Niveau de réparation</div><div style={{ fontWeight: 600, color: niveauColor(selectedSignalement.niveau ?? 1) }}>{selectedSignalement.niveau ?? 1}/10</div></div>
               <div><div style={{ fontSize: 12, color: "var(--gray-600)" }}>Créé le</div><div>{selectedSignalement.createdAt ? new Date(selectedSignalement.createdAt).toLocaleString("fr-FR") : "—"}</div></div>
             </div>
 

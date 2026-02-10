@@ -14,10 +14,17 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Service for synchronizing offline users to Firebase when connection is
@@ -47,6 +54,7 @@ public class SyncService {
      */
     @Scheduled(fixedDelay = 60000) // Check every 60 seconds
     public void syncPendingUsers() {
+        // Ne pas synchroniser automatiquement en mode local
         if (!connectionDetector.isOnline()) {
             log.debug("Offline - skipping sync");
             return;
@@ -178,7 +186,51 @@ public class SyncService {
     }
 
     /**
-     * Sync all unsynced signalements to Firebase.
+     * Force sync ALL signalements to Firebase (regardless of synced_to_firebase flag).
+     * @return Map with sync results
+     */
+    @Transactional
+    public Map<String, Object> syncAllSignalementsToFirebase() {
+        if (!connectionDetector.isOnline()) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("error", "Cannot sync while offline");
+            return result;
+        }
+
+        List<Signalement> allSignalements = signalementRepository.findAll();
+        int success = 0;
+        int failed = 0;
+
+        for (Signalement signalement : allSignalements) {
+            try {
+                // Save to Firebase Realtime Database
+                String firebaseId = firebaseService.saveSignalement(signalement);
+                
+                // Update local record
+                signalement.setFirebaseId(firebaseId);
+                signalement.setSyncedToFirebase(true);
+                signalementRepository.save(signalement);
+                
+                success++;
+                log.info("Synced signalement {} to Firebase ({})", signalement.getId(), firebaseId);
+            } catch (Exception e) {
+                failed++;
+                log.error("Failed to sync signalement {}: {}", signalement.getId(), e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("syncedCount", success);
+        result.put("failedCount", failed);
+        result.put("totalSignalements", allSignalements.size());
+        result.put("message", success + " signalement(s) synchronisé(s) avec succès");
+        return result;
+    }
+
+    /**
+     * Sync only unsynced signalements to Firebase.
      * @return Map with sync results
      */
     @Transactional
@@ -240,6 +292,7 @@ public class SyncService {
     /**
      * Synchronise les signalements depuis Firebase vers PostgreSQL (Local).
      * Récupère les signalements qui existent dans Firebase mais pas en local.
+     * Gère les photos base64 en les sauvegardant comme fichiers.
      * @return Map avec les résultats de la synchronisation
      */
     @Transactional
@@ -267,16 +320,15 @@ public class SyncService {
                     
                     // Vérifier si le signalement existe déjà en local
                     Signalement existing = null;
-                    if (firebaseId != null) {
-                        existing = signalementRepository.findById(firebaseId).orElse(null);
+                    
+                    // 1. Chercher par firebase_id (clé Firebase)
+                    if (firebaseKey != null) {
+                        existing = signalementRepository.findByFirebaseId(firebaseKey);
                     }
                     
-                    // Si firebaseId est null, chercher par firebase_id
-                    if (existing == null && firebaseKey != null) {
-                        existing = signalementRepository.findAll().stream()
-                            .filter(s -> firebaseKey.equals(s.getFirebaseId()))
-                            .findFirst()
-                            .orElse(null);
+                    // 2. Si pas trouvé, chercher par ID numérique
+                    if (existing == null && firebaseId != null) {
+                        existing = signalementRepository.findById(firebaseId).orElse(null);
                     }
                     
                     if (existing != null) {
@@ -305,9 +357,46 @@ public class SyncService {
                         newSignalement.setSyncedToFirebase(true);
                         newSignalement.setFirebaseId(firebaseKey);
                         
-                        signalementRepository.save(newSignalement);
+                        // Gérer les dates
+                        String dateNouveau = (String) fbData.get("dateNouveau");
+                        if (dateNouveau != null) {
+                            newSignalement.setDateNouveau(parseInstant(dateNouveau));
+                        }
+                        String dateEnCours = (String) fbData.get("dateEnCours");
+                        if (dateEnCours != null) {
+                            newSignalement.setDateEnCours(parseInstant(dateEnCours));
+                        }
+                        String dateTermine = (String) fbData.get("dateTermine");
+                        if (dateTermine != null) {
+                            newSignalement.setDateTermine(parseInstant(dateTermine));
+                        }
+                        String createdAt = (String) fbData.get("createdAt");
+                        if (createdAt != null) {
+                            newSignalement.setCreatedAt(parseInstant(createdAt));
+                        }
+                        
+                        // Sauvegarder d'abord pour avoir l'ID
+                        newSignalement = signalementRepository.save(newSignalement);
+                        
+                        // Gérer les photos base64 depuis Firebase
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> photos = (List<Map<String, Object>>) fbData.get("photos");
+                        if (photos != null && !photos.isEmpty()) {
+                            try {
+                                String photoUrl = saveBase64Photo(newSignalement.getId(), photos.get(0));
+                                if (photoUrl != null) {
+                                    newSignalement.setPhotoUrl(photoUrl);
+                                    signalementRepository.save(newSignalement);
+                                }
+                            } catch (Exception e) {
+                                log.warn("Impossible de sauvegarder la photo pour signalement {}: {}", 
+                                    newSignalement.getId(), e.getMessage());
+                            }
+                        }
+                        
                         created++;
-                        log.info("Créé signalement local depuis Firebase: {}", newSignalement.getTitle());
+                        log.info("Créé signalement local depuis Firebase: {} (firebaseKey={})", 
+                            newSignalement.getTitle(), firebaseKey);
                     }
                     
                 } catch (Exception e) {
@@ -336,6 +425,66 @@ public class SyncService {
             result.put("success", false);
             result.put("error", "Erreur: " + e.getMessage());
             return result;
+        }
+    }
+
+    /**
+     * Sauvegarde une photo base64 depuis Firebase en fichier local.
+     * @param signalementId L'ID du signalement
+     * @param photoData Les données de la photo (pixelData, mimeType, etc.)
+     * @return L'URL relative de la photo sauvegardée
+     */
+    private String saveBase64Photo(Long signalementId, Map<String, Object> photoData) {
+        String pixelData = (String) photoData.get("pixelData");
+        if (pixelData == null || pixelData.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Décoder le base64 en bytes
+            byte[] imageBytes = Base64.getDecoder().decode(pixelData);
+            
+            // Déterminer l'extension
+            String mimeType = (String) photoData.getOrDefault("mimeType", "image/jpeg");
+            String extension = ".jpg";
+            if ("image/png".equals(mimeType)) extension = ".png";
+            
+            // Créer le répertoire si nécessaire
+            String uploadDir = "uploads/signalements/";
+            File directory = new File(uploadDir);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            
+            // Générer le nom de fichier
+            String filename = "sig_" + signalementId + "_firebase_" + UUID.randomUUID().toString() + extension;
+            Path filePath = Paths.get(uploadDir + filename);
+            
+            // Écrire le fichier
+            Files.write(filePath, imageBytes);
+            
+            String photoUrl = "/uploads/signalements/" + filename;
+            log.info("Photo sauvegardée depuis Firebase: {} ({} bytes)", photoUrl, imageBytes.length);
+            return photoUrl;
+            
+        } catch (Exception e) {
+            log.error("Erreur lors de la sauvegarde de la photo base64: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Parse une date ISO string en Instant
+     */
+    private Instant parseInstant(String dateString) {
+        if (dateString == null || dateString.isEmpty()) {
+            return Instant.now();
+        }
+        try {
+            return Instant.parse(dateString);
+        } catch (Exception e) {
+            log.warn("Impossible de parser la date: {}", dateString);
+            return Instant.now();
         }
     }
 }

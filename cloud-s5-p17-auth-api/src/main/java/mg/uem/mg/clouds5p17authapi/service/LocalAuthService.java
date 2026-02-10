@@ -85,15 +85,20 @@ public class LocalAuthService {
 
         User user = optUser.get();
 
-        // Check if blocked
-        if (isBlocked(user)) {
+        // Les MANAGER ne sont jamais bloqués
+        boolean isManager = "MANAGER".equalsIgnoreCase(user.getRole());
+
+        // Check if blocked (sauf pour MANAGER)
+        if (!isManager && isBlocked(user)) {
             log.warn("Login blocked for user: {}", normalizedEmail);
             throw new UserBlockedException("Account temporarily locked due to too many failed attempts");
         }
 
         // Verify password
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            incrementFailedAttempts(user);
+            if (!isManager) {
+                incrementFailedAttempts(user);
+            }
             log.warn("Login failed: wrong password for {}", normalizedEmail);
             return null;
         }

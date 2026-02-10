@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Synchronise tous les utilisateurs existants vers Firebase Realtime Database au démarrage
+ * Synchronise tous les utilisateurs existants vers Firebase Realtime Database au démarrage.
+ * Désactivé en mode local (auth.mode=local).
  */
 @Component
 public class UserFirebaseSyncService implements CommandLineRunner {
@@ -19,14 +20,21 @@ public class UserFirebaseSyncService implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final FirebaseService firebaseService;
+    private final String authMode;
 
-    public UserFirebaseSyncService(UserRepository userRepository, FirebaseService firebaseService) {
+    public UserFirebaseSyncService(UserRepository userRepository, FirebaseService firebaseService,
+            @org.springframework.beans.factory.annotation.Value("${auth.mode:auto}") String authMode) {
         this.userRepository = userRepository;
         this.firebaseService = firebaseService;
+        this.authMode = authMode;
     }
 
     @Override
     public void run(String... args) {
+        if ("local".equalsIgnoreCase(authMode)) {
+            log.info("Mode LOCAL — sync users → Firebase Realtime DB ignorée");
+            return;
+        }
         try {
             log.info("Synchronisation des users existants vers Firebase Realtime Database...");
             

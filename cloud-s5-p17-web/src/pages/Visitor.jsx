@@ -24,7 +24,8 @@ export default function Visitor() {
             status: item.status,
             surface: item.surfaceM2,
             budget: item.budgetAr,
-            company: item.entreprise
+            company: item.entreprise,
+            niveau: item.niveau
           }))
         );
         setSummary(stats);
